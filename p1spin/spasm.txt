@@ -1,0 +1,351 @@
+SPASM(1)                         User Commands                         SPASM(1)
+
+NAME
+        spasm - spin assembler
+
+SYNOPSIS
+        spasm [-l] [-d] FILE
+
+DESCRIPTION
+        Spasm assembles the source file given by FILE.  The file name may
+        include the extension, or .spa will be assumed if no extension is
+        specified.  The assembled binary program will written to a file with
+        the same root name plus a .bin extension.  If -l is specified, it will
+        print an assembly listing.  If -d is specified, spasm will print debug
+        information.
+
+        Spasm is an assembly language that defines mnemonics for Spin
+        bytecodes.  Spin bytecodes are executed by the Spin interpreter, which
+        is loaded at boot time from the internal ROM.  The Spin interpreter is
+        a stack-based virtual machine that uses the stack to store parameters
+        that are used by operators, such as add, sub, etc.  The operators store
+        their results back onto the stack.  There are other operators that
+        transfer data back and forth between the stack and hub RAM.
+
+        The Spin bytecodes are listed below.  They are separated into four
+        major groups -- lower, memory, math and extened operators.  The lower
+        group contains a mix of operators, including those that handle program
+        flow, lookup, lookdown, case, and several other miscellaneous functions.
+        The math operators implement the various math and logic functions that
+        use two arguments.
+
+        The memory operators implement load, store, execute and address
+        functions.  A load operation reads data from the hub RAM and pushes it
+        onto the stack.  A store operation pops a value off the stack and
+        stores it in RAM.  The address operator is used to push the absolute
+        address of a hub RAM location onto the stack.
+
+        The execute operation is used to execute an operation directly on a RAM
+        location.  The result can be optionally pushed to the stack.  The
+        operations that can be executed directly on a hub RAM location include
+        the standard 32 math operations plus a small number of extended
+        operations.  The extended operators include pre and post increment and
+        decrement, sign extension and the random function.
+
+        The format of the memory mnemonics is as follows:
+
+            <operation><size><type><mode>
+              operation = {ld, st, ex, la},
+              size      = {b, w, l},
+              type      = {i, l, o, a, v, s}
+              mode      = {c, x, 0, 1, m1, p}
+  
+        The operations are load, store, execute and load address as stated
+        earlier.  The size refers to byte, word and long.  The types are
+        immediate, local, object, absolute, variable and stack.  The modes
+        are compact, indexed, zero, one, minus one and packed.
+
+        As an example, the instruction ldwi means load-word-immediate.  It
+        will load an immediate value onto the stack.  The instruction stba
+        will store a byte at the absolute address residing in the stack.
+
+        There are compact instructions that use a single byte to address
+        the first 8 long values residing in the method's stack frame or in
+        an object's variable space.  These use the size, type and mode
+        characters "llc".  As an example, the method result value can be
+        set with the "stllc 0" instruction.  The fourth long in the objet's
+        variable section could be loaded with "ldllc 12".
+
+        When an execute memory operation is specified it is followed by one of
+        the math operators or an extended operator.  An execute instruction may
+        also specify the "load" extended operator to save the result on the
+        stack.  Examples of using execute instructions are as follows:
+
+        exlo $8 add  ' Add value on stack to the object long at offset $8
+        exwv $20 preinc ' Increment the VAR word at offset $20
+        exll $10 postdec load ' Decrement stack location $10 and load
+
+        Spasm also includes psuedo-ops, which are shortened versions of the
+        memory mnenomics.  The psuedo-ops are made up only of the operation
+        and size fields, plus the "x" charater if it is indexed.  The
+        psuedo-ops are mapped to explicit opcodes depending on the context
+        of the operand.  As an example "ldl 1" maps into "ldli1", and
+        "ldl result" maps into "ldllc 0".
+
+        The Spasm opcodes are listed below.  The offsets used for the jump
+        instructions are signed offsets that are relative to the address of the
+        next instruction.  A "jmp 0" instruction will just execute the next
+        instruction.
+
+        Signed offsets are encoded in either one or two bytes depending
+        on the value of the most significant bit in the first byte.  If the
+        MSB is zero the remaining seven bits are treated as a signed 7-bit
+        number in the range from -64 to 63.  If the MSB is non-zero, the
+        remaining seven bits are used as the most significant bits of a 15-bit
+        signed number, and the next byte provides the eight least sigficant
+        bits.  The 15-bit signed offset has a range from -16384 to 16383.
+
+        The memory opcodes use an unsigned offset that can also be encoded in
+        one or two bytes.  The MSB is used to determine whether it is one or
+        two bytes just like for signed offset.  However, since it is unsigned,
+        the range for the one-byte offset is 0 to 128, and for two bytes it is
+        0 to 32768.
+
+        Lower Opcodes
+        -------------
+        00 ldfrmr              - Load call frame with return value required
+        01 ldfrm               - Load call frame
+        02 ldfrmar             - Load call frame with abort trap & return value
+        03 ldfrma              - Load call frame with abort trap
+        04 jmp      offset     - Jump to signed object offset
+        05 call     meth       - Call method
+        06 callobj  meth, obj  - Call method in object
+        07 callobjx meth, obj  - Call method in object with index
+        08 tjz      offset     - Test and jump if zero
+        09 djnz     offset     - Decrement and jump if not zero
+        0a jz       offset     - Jump if zero
+        0b jnz      offset     - Jump if not zero
+        0c casedone            - Case done without a match
+        0d casevalue           - Execute if value matches case value
+        0e caserange           - Execute if case value within range
+        0f lookdone            - Look up/down done without a match
+        10 lookupval           - 
+        11 lookdnval
+        12 lookuprng
+        13 lookdnrng
+        14 pop                 - Discard N bytes from the stack
+        15 run                 - Prepare new spin cog stack for execution
+        16 strsize             - Determine the size of a string
+        17 strcomp             - Compare two strings
+        18 bytefill            - Fill memory with a constant byte value
+        19 wordfill            - Fill memory with a constant word value
+        1a longfill            - Fill memory with a constant long value
+        1b waitpeq             - Wait till pins are equal to a value
+        1c bytemove            - Copy bytes to a new location
+        1d wordmove            - Copy words to a new location
+        1e longmove            - Copy longs to a new location
+        1f waitpne             - Wait till pins are not equal to value
+        20 clkset              - Change the clock frequency and mode
+        21 cogstop             - Stop the specified cog
+        22 lockret             - Return a lock
+        23 waitcnt             - Wait for cnt to equal a specified value
+        24 ldlsx
+        25 stlsx
+        26 exlsx
+        27 waitvid             - Wait on video
+        28 coginitret          - Start a cog and return the cog number
+        29 locknewret          - Allocate a lock and return the lock number
+        2a locksetret          - Set a lock and return the previous value
+        2b lockclrret          - Clear a lock and return the previous value
+        2c coginit             - Start a cog
+        2d locknew             - Allocate a lock with no return value
+        2e lockset             - Set a lock with no return value
+        2f lockclr             - Clear a lock with no return value
+        30 abort               - Perform an abort to the next abort trap
+        31 abortval            - Perform an abort and return a value
+        32 ret                 - Return without loading a return value
+        33 retval              - Return and load a return value on the stack
+        34 ldlim1              - Load a minus 1
+        35 ldli0               - Load zero
+        36 ldli1               - Load 1
+        37 ldlip  value        - Load a packed-byte constant
+        38 ldbi   value        - Load a single-byte constant
+        39 ldwi   value        - Load a two-byte constant
+        3a ldmi   value        - Load a three-byte constant
+        3b ldli   value        - Load a four-byte constant
+        3c ---                 - Unused opcode
+        3d ldregbit            - Load a bit from a register
+        3d stregbit            - Store a bit to a register
+        3e ldregbits           - Load bits from a register
+        3e stregbits           - Store bit to a register
+        3f ldreg               - Load a register
+        3f streg               - Store a register
+
+        Compact Memory Opcodes
+        --------------
+        40 ldlvc  offset       - Load long variable compact
+        41 stlvc  offset       - Store long variable compact
+        42 exlvc  offset       - Execute on a long variable compact
+        43 lalvc  offset       - Load address of a long variable compact
+        60 ldllc  offset       - Load long local compact
+        61 stllc  offset       - Store long local compact
+        62 exllc  offset       - Execute on a long local compact
+        63 lallc  offset       - Load address of a long local compact
+
+        Byte Memory Opcodes
+        --------------
+        80 ldba                - Load byte absolute
+        81 stba                - Store byte absolute
+        82 exba                - Execute on a byte absolute
+        83 laba                - Load address of a byte absolute
+        84 ldbo   offset       - Load byte object offset
+        85 stbo   offset
+        86 exbo   offset
+        87 labo   offset
+        88 ldbv   offset       - Load byte variable offset
+        89 stbv   offset
+        8a exbv   offset
+        8b labv   offset
+        8c ldbl   offset       - Load byte local offset
+        8d stbl   offset
+        8e exbl   offset
+        8f labl   offset
+        90 ldbax               - Load byte absolute with index
+        91 stbax
+        92 exbax
+        93 labax
+        94 ldbox  offset       - Load byte object offset with index
+        95 stbox  offset
+        96 exbox  offset
+        97 labox  offset
+        98 ldbvx  offset       - Load byte variable offset with index
+        99 stbvx  offset
+        9a exbvx  offset
+        9b labvx  offset
+        9c ldblx  offset       - Load byte local offset with index
+        9d stblx  offset
+        9e exblx  offset
+        9f lablx  offset
+
+        Word Memory Opcodes
+        -------------------
+        a0 ldwa                - Load word absolute
+        a1 stwa
+        a2 exwa
+        a3 lawa
+        a4 ldwo   offset
+        a5 stwo   offset
+        a6 exwo   offset
+        a7 lawo   offset
+        a8 ldwv   offset
+        a9 stwv   offset
+        aa exwv   offset
+        ab lawv   offset
+        ac ldwl   offset
+        ad stwl   offset
+        ae exwl   offset
+        af lawl   offset
+        b0 ldwax               - Load word absolute with index
+        b1 stwax
+        b2 exwax
+        b3 lawax
+        b4 ldwox  offset
+        b5 stwox  offset
+        b6 exwox  offset
+        b7 lawox  offset
+        b8 ldwvx  offset
+        b9 stwvx  offset
+        ba exwvx  offset
+        bb lawvx  offset
+        bc ldwlx  offset
+        bd stwlx  offset
+        be exwlx  offset
+        bf lawlx  offset
+
+        Long Memory Opcodes
+        -------------------
+        c0 ldla                - Load long absolute
+        c1 stla
+        c2 exla
+        c3 lala
+        c4 ldlo   offset
+        c5 stlo   offset
+        c6 exlo   offset
+        c7 lalo   offset
+        c8 ldlv   offset
+        c9 stlv   offset
+        ca exlv   offset
+        cb lalv   offset
+        cc ldll   offset
+        cd stll   offset
+        ce exll   offset
+        cf lall   offset
+        d0 ldlax               - Load long absolute with index
+        d1 stlax
+        d2 exlax
+        d3 lalax
+        d4 ldlox  offset
+        d5 stlox  offset
+        d6 exlox  offset
+        d7 lalox  offset
+        d8 ldlvx  offset
+        d9 stlvx  offset
+        da exlvx  offset
+        db lalvx  offset
+        dc ldllx  offset
+        dd stllx  offset
+        de exllx  offset
+        df lallx  offset
+
+        Math Opcodes
+        ------------
+        e0 ror                    - Rotate right
+        e1 rol                    - Rotate left
+        e2 shr                    - Shift right
+        e3 shl                    - Shift left
+        e4 min                    - Maximum
+        e5 max                    - Minimum
+        e6 neg                    - Negate
+        e7 com                    - Compliment
+        e8 and                    - Bitwise and
+        e9 abs                    - Absolute value
+        ea or                     - Bitwise or
+        eb xor                    - Bitwise exclusive or
+        ec add                    - Add
+        ed sub                    - Subtract
+        ee sar                    - Shift arithmetic right
+        ef rev                    - Bit reverse
+        f0 andl                   - Logical and
+        f1 encode                 - Shift "1" left
+        f2 orl                    - Logical or
+        f3 decode                 - Find left-most "1" bit
+        f4 mul                    - Multiply
+        f5 mulh                   - Multiply high
+        f6 div                    - Divide
+        f7 mod                    - Modulus
+        f8 sqrt                   - Square root
+        f9 cmplt                  - Less than
+        fa cmpgt                  - Greater than
+        fb cmpne                  - Not equal
+        fc cmpeq                  - Equal
+        fd cmple                  - Less than or equal
+        fe cmpge                  - Greater than or equal
+        ff notl                   - Logical not
+
+        Extended opcodes
+        ----------------
+        00 load                   - Load the value
+        02 repeat                 - Repeat index from first to last
+        06 repeats                - Repeat index from first to last with step
+        08 randf                  - Forward random number
+        0c randr                  - Reverse random number
+        10 sexb                   - Sign extend byte
+        14 sexw                   - Sign extend word
+        18 postclr                - Post clear to zero
+        1c postset                - Post set to all ones
+        26 preinc                 - Pre-increment
+        2e postinc                - Post-increment
+        36 predec                 - Pre-decrement
+        3e postdec                - Post-decrement
+
+AUTHOR
+        Dave Hein
+
+COPYRIGHT
+        Copyright (c) 2011, 2012, Dave Hein
+        MIT License (See license.txt in the root directory)
+        This is free software: you are free to change and redistribute it.
+        There is no warranty, to the extent permitted by law.
+
+
+SPASM                             March 2012                           SPASM(1)

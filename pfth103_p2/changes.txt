@@ -1,0 +1,94 @@
+                         Changes in pfth 1.03
+
+1. Added umod and u/ words
+
+2. Fixed the #, udmod and ud/ words to handle numbers with the MSB set.
+   These changes fix a problem with the u. word when the MSB is set.
+
+3. Fixed the putch PASM routine so that it only writes P30 in OUTA
+
+
+                         Changes in pfth 1.02
+
+1. Added ospfth.spin, which runs under Spinix
+
+2. Added support for two simultaneous open files
+
+3. Added bye and reboot words
+
+4. Added sub-directory support
+
+5. Added CD word to change the working directory
+
+6. Modified the s" word to work in the interpretation mode
+
+7. Added a kernel word to make constants and values more efficient
+
+
+                         Changes in pfth 1.00
+
+1. Fixed the FOR and NEXT words
+
+2. Fixed a bug in UNLOOP
+
+3. Added create-file, file-write, file-line, file-flush, file-close and
+   delete-file
+
+4. Added linux.fth that implements simple ls, rm, cp and cat commands
+
+5. Added sdutils.fth that contains some file utilities
+
+6. Added TED -- a tiny text editor
+
+7. Changed SAVE to EESAVE in i2c.fth
+
+
+                         Changes in pfth 0.89
+
+1. Changed the dictionary word structure to use 16-bit pointers instead of 32
+   bits.
+
+2. Changed the execution list in compiled words to use 16-bit execution tokens
+   instead of 32 bits.
+
+3. Changed the positions of the code pointer and DOES pointer to make the inner
+   loop more efficient.  It now runs about 25% faster.
+
+4. Changed SEE back to printing "_lit" for numbers.
+
+5. Implemented a _loop kernel word to make DO-LOOP faster.
+
+
+                         Changes in pfth 0.83
+
+1. Changed SEE in see.fth so that it doesn't print "_lit" for numbers
+
+2. Added bufser.fth that contains a buffered serial driver
+
+3. Added a BUFFERIT word in bufser.fth that reads the serial input into memory
+   until it encounters an "ESC" character.
+
+4. Added an EVALBUF word in bufser.fth that will evaluate multiple lines in a
+   memory buffer
+
+5. Updated the readme.txt file with text contributed by Loopy
+
+6. Updated the readme.txt file with a description of the dictionary word format
+
+7. Added a SAVE word to i2c.fth that will write the current hub RAM image to
+   EEPROM.  Note: The small Spin program at the end of memory must have been
+   preserved for this to boot properly.
+
+8. Changed the CR word so that it emits both a carriage return and a line feed.
+
+9. Added CASE, ENDCASE, OF and ENDOF to init.fth
+
+10. Improved WAITCNT and MS in propwords.fth.  Removed INA!
+
+11. Fixed LIST-FILES in sd.fth to skip over deleted files in the directory
+
+12. Changed the execution token so that it points to the code pointer instead
+    of the beginning of the word in the dictionary
+
+13. Made KEY a deferred word so that it can be re-assigned to the serial input
+    after reading the FILEs in memory
