@@ -1,10 +1,25 @@
-# CC, EXT, and BUILD may be overridden by a top level makefile (e.g. for
-# cross compiling)
-CC = gcc
-EXT = 
-BUILD = ./obj
+# cross compilation scheme taken from Eric Smith's spin2cpp compiler
+# if CROSS is defined, we are building a cross compiler
+# possible targets are: win32, rpi
 
-TARGET = spinsim$(EXT)
+ifeq ($(CROSS),win32)
+  CC=i586-mingw32msvc-gcc
+  CXX=i586-mingw32msvc-g++
+  EXT=.exe
+  BUILD=./build-win32
+else ifeq ($(CROSS),rpi)
+  CC=arm-linux-gnueabihf-gcc
+  CXX=arm-linux-gnueabihf-g++
+  EXT=
+  BUILD=./build-rpi
+else
+  CC=gcc
+  CXX=g++
+  EXT=
+  BUILD=./build
+endif
+
+TARGET = $(BUILD)/spinsim$(EXT)
 
 SOURCES = spinsim.c spininterp.c spindebug.c pasmsim.c pasmdebug.c pasmsim2.c pasmdebug2.c eeprom.c debug.c gdb.c
 
@@ -32,5 +47,5 @@ $(BUILD)/%.o: %.c
 	$(CC) $(CFLAGS) $< -o $@
 
 clean: FORCE
-	rm -f *.o $(TARGET)
+	rm -f $(BUILD)
 FORCE:
