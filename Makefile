@@ -6,17 +6,17 @@ ifeq ($(CROSS),win32)
   CC=i586-mingw32msvc-gcc
   CXX=i586-mingw32msvc-g++
   EXT=.exe
-  BUILD?=./build-win32
+  BUILD=./build-win32
 else ifeq ($(CROSS),rpi)
   CC=arm-linux-gnueabihf-gcc
   CXX=arm-linux-gnueabihf-g++
   EXT=
-  BUILD?=./build-rpi
+  BUILD=./build-rpi
 else
   CC=gcc
   CXX=g++
   EXT=
-  BUILD?=./build
+  BUILD=./build
 endif
 
 TARGET = $(BUILD)/spinsim$(EXT)
