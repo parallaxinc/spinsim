@@ -93,7 +93,8 @@ void gdb(void);
 
 void spinsim_exit(int32_t exitcode)
 {
-    restore_console_io();
+// dbetz: not defined for Windows and a nop for anything else
+//    restore_console_io();
     exit(exitcode);
 }
 
@@ -889,14 +890,15 @@ int main(int argc, char **argv)
     if (!fname && !gdbmode && !eeprom) usage();
     
     RebootProp();
-    initialize_console_io();
+// dbetz: not defined for Windows and a nop for anything else
+//    initialize_console_io();
     if (gdbmode)
 	gdb();
     else if (debugmode)
 	Debug();
     else
       RunProp(maxloops);
-    restore_console_io();
+//    restore_console_io();
     if (eeprom) EEPromClose();
     if (profile) PrintStats();
     return 0;
