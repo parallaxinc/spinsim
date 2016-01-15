@@ -47,5 +47,5 @@ $(BUILD)/%.o: %.c
 	$(CC) $(CFLAGS) $< -o $@
 
 clean: FORCE
-	rm -f $(BUILD)
+	rm -rf $(BUILD)
 FORCE:
