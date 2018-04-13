@@ -6,12 +6,12 @@
 '******************************************************************************/
 #include <stdio.h>
 #include <unistd.h>
+#include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include "spinsim.h"
 
-extern int32_t pin_val;
+extern int32_t pin_val_a;
 extern int32_t eeprom;
 
 static int32_t scl_prev = 1;
@@ -28,8 +28,8 @@ static unsigned char memory[256*256];
 
 void CheckEEProm()
 {
-    int32_t scl = (pin_val >> 28) & 1;
-    int32_t sda = (pin_val >> 29) & 1;
+    int32_t scl = (pin_val_a >> 28) & 1;
+    int32_t sda = (pin_val_a >> 29) & 1;
 
     if (!eeprom) return;
 
@@ -136,7 +136,7 @@ void CheckEEProm()
     }
     if (drivepin)
     {
-        pin_val = (pin_val & (~(1 << 29))) | (driveval << 29);
+        pin_val_a = (pin_val_a & (~(1 << 29))) | (driveval << 29);
         sda = driveval;
     }
     scl_prev = scl;
@@ -148,7 +148,7 @@ static FILE *OpenFile(char *fname, char *mode)
     FILE *file = fopen(fname, mode);
     if (!file)
     {
-        printf("Could not open %s\n", fname);
+        printf("Could not open %s%s", fname, NEW_LINE);
         spinsim_exit(1);
     }
     return file;

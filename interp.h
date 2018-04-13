@@ -19,6 +19,16 @@
 
 #define INVALIDATE_INSTR 0x80000000
 
+typedef struct SerialS {
+    int32_t mode;
+    int32_t flag;
+    int32_t state;
+    int32_t count;
+    int32_t value;
+    int32_t pin_num;
+    int32_t bitcycles;
+} SerialT;
+
 // This struct is used by the PASM simulator
 typedef struct PasmVarsS {
     int32_t mem[512];
@@ -31,6 +41,7 @@ typedef struct PasmVarsS {
     int32_t waitmode;
     int32_t breakpnt;
     // P2 variables
+    int32_t lut[512];
     int32_t instruct1;
     int32_t instruct2;
     int32_t instruct3;
@@ -39,10 +50,16 @@ typedef struct PasmVarsS {
     int32_t pc2;
     int32_t pc3;
     int32_t pc4;
-    int32_t dcachehubaddr;
-    int32_t dcachecogaddr;
-    int32_t icachehubaddr[4];
-    int32_t icachenotused[4];
+    int32_t str_fifo_buffer[16];
+    int32_t str_fifo_rindex;
+    int32_t str_fifo_windex;
+    int32_t str_fifo_head_addr;
+    int32_t str_fifo_tail_addr;
+    int32_t str_fifo_addr0;
+    int32_t str_fifo_addr1;
+    int32_t str_fifo_mode;
+    int32_t str_fifo_work_word;
+    int32_t str_fifo_work_flag;
     int32_t ptra;
     int32_t ptra0;
     int32_t ptrb;
@@ -61,23 +78,64 @@ typedef struct PasmVarsS {
     int32_t repbot;
     int32_t reptop;
     int32_t repforever;
-    int32_t dcache[8];
-    int32_t icache[4][8];
-    int32_t retstack[4];
-    int32_t auxram[256];
+    int32_t retstack[8];
     int32_t printflag;
     int32_t retptr;
-    int32_t divq;
-    int32_t divr;
-    int32_t divisor;
-    int32_t mulcount;
+    int32_t memflag;
+    int32_t qreg;
+    int32_t qxreg;
+    int32_t qyreg;
+    int32_t qxposted;
+    int32_t qyposted;
+    int32_t cordic_count;
+    int32_t cordic_depth;
+    int32_t qxqueue[3];
+    int32_t qyqueue[3];
     int32_t augsvalue;
     int32_t augsflag;
     int32_t augdvalue;
     int32_t augdflag;
+    int32_t altsflag;
+    int32_t altsvalue;
+    int32_t altdflag;
+    int32_t altdvalue;
+    int32_t altrflag;
+    int32_t altrvalue;
+    int32_t altiflag;
+    int32_t altivalue;
+    int32_t altnflag;
+    int32_t altnvalue;
+    int32_t altsvflag;
+    int32_t altsvvalue;
     int32_t prefetch;
     int32_t sqrt;
     int32_t lastd;
+    int32_t phase;
+    int32_t rwrep;
+    int32_t cntreg1;
+    int32_t cntreg2;
+    int32_t cntreg3;
+    int32_t intflags;
+    int32_t intstate;
+    int32_t intenable1;
+    int32_t intenable2;
+    int32_t intenable3;
+    int32_t pinpatmode;
+    int32_t pinpatmask;
+    int32_t pinpattern;
+    int32_t pinedge;
+    int32_t lockedge;
+    int32_t rdl_mask;
+    int32_t wrl_mask;
+    int32_t blnpix_var;
+    int32_t mixpix_mode;
+    int32_t share_lut;
+    uint32_t skip_mask;
+    uint32_t skip_mode;
+    SerialT serina;
+    SerialT serinb;
+    SerialT serouta;
+    SerialT seroutb;
     int64_t acca;
     int64_t accb;
     int64_t mul;
@@ -125,13 +183,21 @@ void RebootProp(void);
 int32_t GetCnt(void);
 void UpdatePins(void);
 int32_t MAP_ADDR(int32_t addr);
-void DebugPasmInstruction(PasmVarsT *pasmvars);
-int  ExecutePasmInstruction(PasmVarsT *pasmvars);
-void DebugPasmInstruction2(PasmVarsT *pasmvars);
-int  ExecutePasmInstruction2(PasmVarsT *pasmvars);
 void StartCog(SpinVarsT *spinvars, int par, int cogid);
+int  CheckSerialIn(SerialT *serial);
+void CheckSerialOut(SerialT *serial);
+int  SerialSend(SerialT *serial, int portval);
+void SerialReceive(SerialT *serial, int portval);
+void SerialInit(SerialT *serial, int pin_num, int baudrate, int mode);
 void StartPasmCog(PasmVarsT *pasmvars, int par, int addr, int cogid);
-void StartPasmCog2(PasmVarsT *pasmvars, int par, int addr, int cogid);
+void StartPasmCog2(PasmVarsT *pasmvars, int par, int addr, int cogid, int hubexec);
+void StartPasmCog3(PasmVarsT *pasmvars, int par, int addr, int cogid);
+void DebugPasmInstruction(PasmVarsT *pasmvars);
+void DebugPasmInstruction2(PasmVarsT *pasmvars);
+void DebugPasmInstruction3(PasmVarsT *pasmvars);
+int  ExecutePasmInstruction(PasmVarsT *pasmvars);
+int  ExecutePasmInstruction2(PasmVarsT *pasmvars);
+int  ExecutePasmInstruction3(PasmVarsT *pasmvars);
 /*
 + -----------------------------------------------------------------------------------------------------------------------------+
 |                                                   TERMS OF USE: MIT License                                                  |

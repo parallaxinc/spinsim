@@ -9,22 +9,21 @@
 
 extern char *hubram;
 extern int32_t memsize;
-extern char lockstate[8];
-extern char lockalloc[8];
+extern char lockstate[16];
+extern char lockalloc[16];
 extern PasmVarsT PasmVars[8];
 extern int32_t pasmspin;
 extern int32_t cycleaccurate;
 extern int32_t loopcount;
-extern int32_t proptwo;
-extern int32_t pin_val;
+extern int32_t pin_val_a;
 
 extern FILE *tracefile;
 
 void PrintResults(int32_t zcri, int32_t zflag, int32_t cflag, int32_t result)
 {
-    if (zcri & 8) printf(" Z=%d", zflag);
-    if (zcri & 4) printf(" C=%d", cflag);
-    if (zcri & 2) printf(" R=%8.8x", result);
+    if (zcri & 8) fprintf(tracefile, " Z=%d", zflag);
+    if (zcri & 4) fprintf(tracefile, " C=%d", cflag);
+    if (zcri & 2) fprintf(tracefile, " R=%8.8x", result);
 }
 
 static int32_t parity(int32_t val)
@@ -42,7 +41,7 @@ static int32_t abs(int32_t val)
     return val < 0 ? -val : val;
 }
 
-int32_t CheckWaitFlag(PasmVarsT *pasmvars, int mode)
+int32_t CheckWaitFlag1(PasmVarsT *pasmvars, int mode)
 {
     int32_t hubmode = mode & 1;
     int32_t debugmode = mode & 2;
@@ -54,18 +53,12 @@ int32_t CheckWaitFlag(PasmVarsT *pasmvars, int mode)
     }
     else if (hubmode)
     {
-	if (proptwo)
-	    waitflag = (pasmvars->cogid - loopcount) & 7;
-	else
-	    waitflag = ((pasmvars->cogid >> 1) - loopcount) & 3;
+	waitflag = ((pasmvars->cogid >> 1) - loopcount) & 3;
 	waitflag++;
     }
     else
     {
-        if (proptwo)
-            waitflag = 2;
-        else
-            waitflag = 1;
+        waitflag = 1;
     }
     if (!debugmode)
     {
@@ -127,7 +120,7 @@ int32_t ExecutePasmInstruction(PasmVarsT *pasmvars)
     // Check for a hub wait
     if (cycleaccurate && !(instruct & 0xe0000000))
     {
-	if (CheckWaitFlag(pasmvars, 1)) return 0;
+	if (CheckWaitFlag1(pasmvars, 1)) return 0;
     }
 
     // Extract parameters from the instruction
@@ -143,7 +136,7 @@ int32_t ExecutePasmInstruction(PasmVarsT *pasmvars)
     else if (srcaddr == 0x1f1)
         value2 = GetCnt();
     else if (srcaddr == 0x1f2)
-        value2 = pin_val;
+        value2 = pin_val_a;
     else
         value2 = pasmvars->mem[srcaddr];
 
@@ -570,7 +563,7 @@ int32_t ExecutePasmInstruction(PasmVarsT *pasmvars)
 
 	    case 1: // cmpsx
 	    result = value1 - value2 - cflag;
-	    cflag = value1 < (value2 + cflag);
+	    cflag = value1 < ((int64_t)value2 + cflag);
 	    zflag = (result == 0) & zflag;
 	    break;
 
@@ -620,7 +613,8 @@ int32_t ExecutePasmInstruction(PasmVarsT *pasmvars)
 	    case 0: // cmpsub
 	    cflag = (((uint32_t)value1) >= ((uint32_t)value2));
 	    result = cflag ? value1 - value2 : value1;
-	    zflag = (result == 0);
+	    //zflag = (result == 0) & cflag;
+            zflag = (value1 == value2);
 	    break;
 
 	    case 1: // djnz
@@ -645,7 +639,7 @@ int32_t ExecutePasmInstruction(PasmVarsT *pasmvars)
 	    break;
 
 	    case 4: // waitpeq - result, zflag and cflag not validated
-            result = (pin_val & value2) ^ value1;
+            result = (pin_val_a & value2) ^ value1;
 	    if (result)
 	    {
 		//pasmvars->state = 6;
@@ -662,7 +656,7 @@ int32_t ExecutePasmInstruction(PasmVarsT *pasmvars)
 	    break;
 
 	    case 5: // waitpne - result, zflag and cflag not validated
-            result = (pin_val & value2) ^ value1;
+            result = (pin_val_a & value2) ^ value1;
 	    if (!result)
 	    {
 		//pasmvars->state = 6;

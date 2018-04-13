@@ -7,14 +7,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef LINUX
 #include "conion.h"
-#else
-#include <conio.h>
-#endif
 #include <ctype.h>
 #include "interp.h"
 #include "opcodes.h"
+#include "spinsim.h"
 
 #define OP_NONE                      0
 #define OP_UNSIGNED_OBJ_OFFSET       1
@@ -106,7 +103,7 @@ void ProcessRet(void)
 {
     if (!symflag) return;
     methodlev--;
-    fprintf(tracefile, "return %s\n\n", objname[methodlev]);
+    fprintf(tracefile, "return %s%s%s", objname[methodlev], NEW_LINE, NEW_LINE);
 }
 
 static char linebuf[200];
@@ -135,7 +132,7 @@ void ProcessCall(int32_t subnum, int32_t mode)
 	    methnum++;
 	    if (methnum == subnum)
 	    {
-	      fprintf(tracefile, "call %s:%s\n", objname[methodlev], linebuf);
+	      fprintf(tracefile, "call %s:%s%s", objname[methodlev], linebuf, NEW_LINE);
 		fclose(infile);
 		return;
 	    }
@@ -152,7 +149,7 @@ void ProcessCall(int32_t subnum, int32_t mode)
 	    methnum++;
 	    if (methnum == subnum)
 	    {
-	      fprintf(tracefile, "call %s:%s\n", objname[methodlev], linebuf);
+	      fprintf(tracefile, "call %s:%s%s", objname[methodlev], linebuf, NEW_LINE);
 		fclose(infile);
 		return;
 	    }
@@ -270,7 +267,7 @@ void PrintOp(SpinVarsT *spinvars)
     int32_t opcode;
     int32_t opform = 0;
     char *opstr;
-    int exop1, exop2;
+    //int exop1, exop2;
     int32_t val;
     int32_t operand;
     char *regop[] = {"ldreg", "streg", "exreg", "??reg"};
@@ -281,8 +278,8 @@ void PrintOp(SpinVarsT *spinvars)
     if (spinvars->state != 1) return;
 
     opcode = BYTE(pcurr);
-    exop1 = GetOpIndex(opcode);
-    exop2 = -1;
+    //exop1 = GetOpIndex(opcode);
+    //exop2 = -1;
     opstr = FindOpcode(pcurr, &opform, 0);
 
     memset(bytestr, ' ', 40);
@@ -418,7 +415,7 @@ void PrintOp(SpinVarsT *spinvars)
     {
 	char *loadstr = "";
 	opcode = BYTE(pcurr);
-	exop2 = GetExOpIndex(opcode);
+	//exop2 = GetExOpIndex(opcode);
 	if (opcode & 0x80)
 	{
 	    loadstr = "load";
@@ -453,7 +450,7 @@ void PrintOp(SpinVarsT *spinvars)
 	pcurr++;
     }
     bytestr[strlen(bytestr)] = ' ';
-    fprintf(tracefile, "%s %s\n", bytestr, symstr);
+    fprintf(tracefile, "%s %s%s", bytestr, symstr, NEW_LINE);
     //fprintf(tracefile, "%s [%2d,%2d] %s\n", bytestr, exop1, exop2, symstr);
 }
 
@@ -561,14 +558,14 @@ void PrintStats(void)
                     }
 		    exname = optable[k].opname;
 		}
-                fprintf(tracefile, "%10d, %2.2x:%2.2x, %s:%s\n",
-		    exopcount[opindex][j], i, exop, opname, exname);
+                fprintf(tracefile, "%10d, %2.2x:%2.2x, %s:%s%s",
+		    exopcount[opindex][j], i, exop, opname, exname, NEW_LINE);
 
 	    }
 	}
 	else
 	{
-	  fprintf(tracefile, "%10d, %2.2x,    %s\n", opcount[i], i, opname);
+	  fprintf(tracefile, "%10d, %2.2x,    %s%s", opcount[i], i, opname, NEW_LINE);
 	}
     }
 }

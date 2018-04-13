@@ -9,7 +9,7 @@
 #include "interp.h"
 
 char *FindChar(char *str, int32_t val);
-int32_t CheckWaitFlag(PasmVarsT *pasmvars, int mode);
+int32_t CheckWaitFlag1(PasmVarsT *pasmvars, int mode);
 
 extern char *hubram;
 extern int32_t memsize;
@@ -168,7 +168,7 @@ void DebugPasmInstruction(PasmVarsT *pasmvars)
     {
 	if (opcode <= 0x07)        // hubop
         {
-	    if (CheckWaitFlag(pasmvars, 3)) xflag = 2;
+	    if (CheckWaitFlag1(pasmvars, 3)) xflag = 2;
         }
         else if (opcode == 0x3e)   // waitcnt
         {
@@ -202,15 +202,9 @@ void DebugPasmInstruction(PasmVarsT *pasmvars)
     while (i < 7) opstr[i++] = ' ';
     opstr[i] = 0;
 
-#if 0
-    fprintf(tracefile, "%3.3x %8.8x %d %d %s %s %s %3.3x %s%3.3x %8.8x %8.8x", pasmvars->pc,
-        instruct, zflag, cflag, xstr[xflag], condnames[cond], opstr, dstaddr,
-	istr[zcri & 1], srcaddr, value1, value2);
-#else
     fprintf(tracefile, "%6d %3.3x %8.8x %s %s %s %3.3x, %s%3.3x%s%s%s", loopcount * 4, pc,
         instruct, xstr[xflag], condnames[cond], opstr, dstaddr,
 	istr[zcri & 1], srcaddr, wzstr, wcstr, wrstr);
-#endif
 }
 /*
 +------------------------------------------------------------------------------------------------------------------------------+

@@ -8,14 +8,9 @@
 #include <string.h>
 #include <ctype.h>
 #include <unistd.h>
-#ifdef LINUX
 #include <dirent.h>
 #include <sys/stat.h>
 #include "conion.h"
-#else
-#include <conio.h>
-#include <direct.h>
-#endif
 #include "interp.h"
 #include "spinsim.h"
 
@@ -27,7 +22,6 @@ extern FILE *cmdfile;
 extern PasmVarsT PasmVars[8];
 extern char *hubram;
 char cmd[1028];
-extern int32_t proptwo;
 extern int32_t profile;
 extern int32_t loopcount;
 

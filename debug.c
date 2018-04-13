@@ -9,14 +9,9 @@
 #include <string.h>
 #include <ctype.h>
 #include <unistd.h>
-#ifdef LINUX
 #include <dirent.h>
 #include <sys/stat.h>
 #include "conion.h"
-#else
-#include <conio.h>
-#include <direct.h>
-#endif
 #include "interp.h"
 #include "spindebug.h"
 #include "eeprom.h"
@@ -29,22 +24,26 @@ extern int32_t eeprom;
 extern char *hubram;
 extern int32_t printbreak;
 extern PasmVarsT PasmVars[8];
+extern SerialT serial_in;
+extern SerialT serial_out;
 
 void GetDebugString(char *ptr);
 int32_t RunProp(int32_t maxloops);
 
 void Help(void)
 {
-    printf("Debug Commands\n");
-    printf("help           - Print command list\n");
-    printf("exit           - Exit spinsim\n");
-    printf("step           - Run one cycle\n");
-    printf("stepx          - Run next executed instruction\n");
-    printf("run            - Run continuously\n");
-    printf("verbose #      - Set verbosity level\n");
-    printf("reboot         - Reboot the Prop\n");
-    printf("setbr cog addr - Set breakpoint for cog to addr\n");
-    printf("state cog      - Dump cog state\n");
+    printf("Debug Commands%s", NEW_LINE);
+    printf("help           - Print command list%s", NEW_LINE);
+    printf("exit           - Exit spinsim%s", NEW_LINE);
+    printf("step           - Run one cycle%s", NEW_LINE);
+    printf("stepx          - Run next executed instruction%s", NEW_LINE);
+    printf("run            - Run continuously%s", NEW_LINE);
+    printf("verbose #      - Set verbosity level%s", NEW_LINE);
+    printf("reboot         - Reboot the Prop%s", NEW_LINE);
+    printf("setbr cog addr - Set breakpoint for cog to addr%s", NEW_LINE);
+    printf("state cog      - Dump cog state%s", NEW_LINE);
+    printf("peekc cog addr - Peek cog memory%s", NEW_LINE);
+    printf("peekh addr     - Peek hub memory%s", NEW_LINE);
 }
 
 char *SkipChar(char *str, int value)
@@ -59,15 +58,15 @@ char *SkipChar(char *str, int value)
 
 void DumpState(PasmVarsT *pasmvars)
 {
-    printf("cflag = %d, zflag = %d, waitflag = %d\n",
-	pasmvars->cflag, pasmvars->zflag, pasmvars->waitflag);
-    printf("ptra = %5.5x, ptrb = %5.5x, ptrx = %2.2x, ptry = %2.2x, inda = %3.3x, indb = %3.3x\n",
+    printf("cflag = %d, zflag = %d, waitflag = %d%s",
+	pasmvars->cflag, pasmvars->zflag, pasmvars->waitflag, NEW_LINE);
+    printf("ptra = %5.5x, ptrb = %5.5x, ptrx = %2.2x, ptry = %2.2x, inda = %3.3x, indb = %3.3x%s",
 	pasmvars->ptra, pasmvars->ptra, pasmvars->ptrx,
-	pasmvars->ptry, pasmvars->inda, pasmvars->indb);
-    printf("pc1 = %8.8x, instruct1 = %8.8x\n", pasmvars->pc1, pasmvars->instruct1);
-    printf("pc2 = %8.8x, instruct2 = %8.8x\n", pasmvars->pc2, pasmvars->instruct2);
-    printf("pc3 = %8.8x, instruct3 = %8.8x\n", pasmvars->pc3, pasmvars->instruct3);
-    printf("pc4 = %8.8x, instruct4 = %8.8x\n", pasmvars->pc4, pasmvars->instruct4);
+	pasmvars->ptry, pasmvars->inda, pasmvars->indb, NEW_LINE);
+    printf("pc1 = %8.8x, instruct1 = %8.8x%s", pasmvars->pc1, pasmvars->instruct1, NEW_LINE);
+    printf("pc2 = %8.8x, instruct2 = %8.8x%s", pasmvars->pc2, pasmvars->instruct2, NEW_LINE);
+    printf("pc3 = %8.8x, instruct3 = %8.8x%s", pasmvars->pc3, pasmvars->instruct3, NEW_LINE);
+    printf("pc4 = %8.8x, instruct4 = %8.8x%s", pasmvars->pc4, pasmvars->instruct4, NEW_LINE);
 }
 
 void Debug(void)
@@ -84,7 +83,7 @@ void Debug(void)
     {
         while (1)
         {
-            printf("\nDEBUG> ");
+            printf("%sDEBUG> ", NEW_LINE);
 	    fflush(stdout);
             GetDebugString(buffer);
 	    if (buffer[0] == 0) strcpy(buffer, lastcmd);
@@ -139,8 +138,20 @@ void Debug(void)
             {
                 int cognum, address;
                 sscanf(buffer+6, "%x %x", &cognum, &address);
-                PasmVars[cognum&7].breakpnt = address;
+                PasmVars[cognum&15].breakpnt = address;
                 LONG(SYS_DEBUG) = printflag;
+            }
+            else if (!strncmp(buffer, "peekc ", 6))
+            {
+                int cognum, address;
+                sscanf(buffer+6, "%x %x", &cognum, &address);
+                printf("%8.8x%s", PasmVars[cognum&15].mem[address&511], NEW_LINE);
+            }
+            else if (!strncmp(buffer, "peekh ", 6))
+            {
+                int address;
+                sscanf(buffer+6, "%x", &address);
+                printf("%8.8x%s", hubram[address], NEW_LINE);
             }
             else if (!strcmp(buffer, "reboot"))
             {
@@ -152,7 +163,7 @@ void Debug(void)
 		DumpState(&PasmVars[cognum]);
             }
 	    else
-		printf("?\n");
+		printf("?%s", NEW_LINE);
         }
         if (runflag) RunProp(maxloops);
 	if (stepflag)
@@ -168,6 +179,7 @@ void Debug(void)
 void GetDebugString(char *ptr)
 {
     int value;
+     char *ptr0 = ptr;
 
     while (1)
     {
@@ -175,12 +187,25 @@ void GetDebugString(char *ptr)
         while (!kbhit());
 #endif
         value = getch();
-        putchx(value);
+        if (value == 8 || value == 0x7f)
+        {
+            if (ptr != ptr0)
+            {
+                ptr--;
+                putchx(8);
+                putchx(' ');
+                putchx(8);
+            }
+            continue;
+        }
         if (value == 13 || value == 10)
         {
+            putchx(13);
+            putchx(10);
             *ptr = 0;
             return;
         }
+        putchx(value);
         *ptr++ = value;
     }
 }
@@ -195,8 +220,8 @@ int32_t RunProp(int32_t maxloops)
         CheckCommand();
         if (baudrate)
         {
-            CheckSerialOut();
-            if (CheckSerialIn()) return 1;
+            CheckSerialOut(&serial_out);
+            if (CheckSerialIn(&serial_in)) return 1;
         }
         if (eeprom)
             CheckEEProm();

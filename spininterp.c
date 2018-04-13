@@ -7,14 +7,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef LINUX
 #include "conion.h"
-#else
-#include <conio.h>
-#endif
 #include <ctype.h>
 #include <sys/timeb.h>
 #include "interp.h"
+#include "spinsim.h"
 
 extern int32_t printflag;
 extern PasmVarsT PasmVars[8];
@@ -22,11 +19,11 @@ extern char *hubram;
 extern int32_t memsize;
 extern int32_t loopcount;
 extern int32_t cycleaccurate;
-extern int32_t proptwo;
-extern int32_t pin_val;
+extern int32_t propmode;
+extern int32_t pin_val_a;
 
-extern char lockstate[8];
-extern char lockalloc[8];
+extern char lockstate[16];
+extern char lockalloc[16];
 
 extern FILE *tracefile;
 
@@ -48,8 +45,12 @@ int32_t MAP_ADDR(int32_t addr)
     }
     else if (((uint32_t)addr) >= memsize)
     {
-      fprintf(tracefile, "MAP_ADDR: address out of bounds %8.8x\n", addr);
+#if 0
+        fprintf(tracefile, "MAP_ADDR(%d): address out of bounds %8.8x\n", loopcount, addr);
 	addr = memsize + 12;
+#else
+        addr &= memsize - 1;
+#endif
     }
     //fprintf(tracefile, "MAP_ADDR: %8.8x %8.8x\n", addr, ((uint32_t *)hubram)[addr>>2]);
 
@@ -62,7 +63,7 @@ int32_t GetCnt()
 
     if (cycleaccurate)
     {
-	if (proptwo)
+	if (propmode >= 2)
 	    cycles = loopcount;
 	else
 	    cycles = loopcount * 4;
@@ -98,7 +99,7 @@ void UpdatePins(void)
 	    mask |= mask1;
 	}
     }
-    pin_val = (~mask) | val;
+    pin_val_a = (~mask) | val;
 }
 
 int32_t GetSignedOffset(int32_t *ppcurr)
@@ -398,7 +399,7 @@ void ExecuteLowerOp(SpinVarsT *spinvars)
 	    pcurr = 0xfffc;
 	}
 	else
-	  fprintf(tracefile, "%4.4x %2.2x - NOT IMPLEMENTED\n", pcurr - 1, opcode);
+	  fprintf(tracefile, "%4.4x %2.2x - NOT IMPLEMENTED%s", pcurr - 1, opcode, NEW_LINE);
     }
     else if (opcode >= 0x16 && opcode <= 0x23)
     {
@@ -729,7 +730,7 @@ void ExecuteLowerOp(SpinVarsT *spinvars)
     }
     else
     {
-      fprintf(tracefile, "NOT PROCESSED\n");
+      fprintf(tracefile, "NOT PROCESSED%s", NEW_LINE);
     }
     spinvars->pcurr = pcurr;
     spinvars->dcurr = dcurr;
@@ -787,7 +788,7 @@ void ExecuteRegisterOp(SpinVarsT *spinvars, int32_t operand, int32_t msb, int32_
         if (operand == 0x11) // cnt = $1f1
             parm1 = GetCnt();
         else if (operand == 0x12) // ina = $1f2
-	    parm1 = pin_val;
+	    parm1 = pin_val_a;
         else
             parm1 = reg[operand];
 	parm1 = (parm1 >> lsb) & mask;
@@ -804,7 +805,7 @@ void ExecuteRegisterOp(SpinVarsT *spinvars, int32_t operand, int32_t msb, int32_
             if (operand == 0x11) // cnt = $1f1
                 parm1 = GetCnt();
             else if (operand == 0x12) // ina = $1f2
-	        parm1 = pin_val;
+	        parm1 = pin_val_a;
             else
                 parm1 = reg[operand];
         }
@@ -825,7 +826,7 @@ void ExecuteRegisterOp(SpinVarsT *spinvars, int32_t operand, int32_t msb, int32_
         dcurr = spinvars->dcurr;
     }
     else
-      fprintf(tracefile, "Undefined register operation\n");
+      fprintf(tracefile, "Undefined register operation%s", NEW_LINE);
 
     spinvars->pcurr = pcurr;
     spinvars->dcurr = dcurr;
@@ -1040,7 +1041,7 @@ int32_t ExecuteExtraOp(SpinVarsT *spinvars, int32_t opcode, int32_t parm1, int32
     }
     else
     {
-      fprintf(tracefile, "NOT IMPLEMENTED\n");
+      fprintf(tracefile, "NOT IMPLEMENTED%s", NEW_LINE);
         parm2 = 0;
     }
 
@@ -1264,7 +1265,7 @@ int32_t ExecuteMathOp(SpinVarsT *spinvars, int32_t opcode, int32_t parm1)
 	break;
 
 	default:
-	  fprintf(tracefile, "NOT PROCESSED\n");
+	  fprintf(tracefile, "NOT PROCESSED%s", NEW_LINE);
     }
 
     // Push the result back to the stack

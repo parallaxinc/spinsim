@@ -1,33 +1,22 @@
 /*******************************************************************************
 ' Author: Dave Hein
-' Version 0.75
-' Copyright (c) 2010 - 2014
+' Version 0.97
+' Copyright (c) 2010 - 2017
 ' See end of file for terms of use.
 '******************************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
 #include <ctype.h>
 #include <unistd.h>
-#ifdef LINUX
 #include <dirent.h>
 #include <sys/stat.h>
+#include "spinsim.h"
 #include "conion.h"
-#else
-#include <conio.h>
-#include <direct.h>
-#endif
 #include "interp.h"
 #include "rom.h"
 #include "spindebug.h"
 #include "eeprom.h"
-
-// Define system I/O addresses and commands
-//#define SYS_COMMAND    0x12340000
-//#define SYS_LOCKNUM    0x12340002
-//#define SYS_PARM       0x12340004
-//#define SYS_DEBUG      0x12340008
 
 #define SYS_CON_PUTCH     1
 #define SYS_CON_GETCH     2
@@ -57,8 +46,8 @@ char *extram[4];
 int32_t extmemsize[4];
 uint32_t extmembase[4];
 int32_t extmemnum = 0;
-char lockstate[8];
-char lockalloc[8];
+char lockstate[16];
+char lockalloc[16];
 
 char objname[100][20];
 int32_t methodnum[100];
@@ -71,19 +60,26 @@ int32_t profile = 0;
 int32_t memsize = 64;
 int32_t cycleaccurate = 0;
 int32_t loopcount = 0;
-int32_t proptwo = 0;
+int32_t propmode = 0;
 int32_t baudrate = 0;
-int32_t pin_val = -1;
+int32_t pin_val_a = -1;
+int32_t pin_val_b = -1;
 int32_t gdbmode = 0;
 int32_t eeprom = 0;
 int32_t debugmode = 0;
 int32_t printbreak = 0;
+SerialT serial_in;
+SerialT serial_out;
+int32_t fjmpflag = 0;
+int32_t nohubslots = 0;
+int32_t pstmode = 0;
+int32_t kludge = 0;
 
 FILE *logfile = NULL;
 FILE *tracefile = NULL;
 FILE *cmdfile = NULL;
 
-PasmVarsT PasmVars[8];
+PasmVarsT PasmVars[16];
 
 void PrintOp(SpinVarsT *spinvars);
 void ExecuteOp(SpinVarsT *spinvars);
@@ -91,17 +87,19 @@ char *FindChar(char *str, int32_t val);
 void Debug(void);
 int32_t RunProp(int32_t maxloops);
 void gdb(void);
+void UpdateRWlongFlags(void);
 
 void spinsim_exit(int32_t exitcode)
 {
-// dbetz: not defined for Windows and a nop for anything else
-//    restore_console_io();
+#ifndef __MINGW32__
+    restore_console_io();
+#endif
     exit(exitcode);
 }
 
 void usage(void)
 {
-    fprintf(stderr, "Spinsim Version 0.75\n");
+    fprintf(stderr, "Spinsim Version 0.97\n");
     fprintf(stderr, "usage: spinsim [options] file\n");
     fprintf(stderr, "The options are as follows:\n");
     fprintf(stderr, "     -v# Set verbosity level\n");
@@ -112,7 +110,7 @@ void usage(void)
     fprintf(stderr, "     -P  Profile Spin opcode usage\n");
     fprintf(stderr, "     -m# Set the hub memory size to # K-bytes\n");
     //fprintf(stderr, "     -c  Enable cycle-accurate mode for pasm cogs\n");
-    fprintf(stderr, "     -t  Enable the Prop 2 mode\n");
+    fprintf(stderr, "     -t# Enable the Prop 2 mode.  # specifies options\n");
     fprintf(stderr, "     -b# Enable the serial port and set the baudrate to # (default 115200)\n");
     fprintf(stderr, "     -gdb Operate as a GDB target over stdin/stdout\n");
     fprintf(stderr, "     -L <filename> Log GDB remote comm to <filename>\n");
@@ -120,6 +118,7 @@ void usage(void)
     //fprintf(stderr, "     -x# Set the external memory size to # K-bytes\n");
     fprintf(stderr, "     -e Use eeprom.dat\n");
     fprintf(stderr, "     -d Use debugger\n");
+    fprintf(stderr, "     -pst Use PST mode\n");
     spinsim_exit(1);
 }
 
@@ -129,6 +128,7 @@ void putchx(int32_t val)
     fflush(stdout);
 }
 
+#if 0
 int32_t getchx(void)
 {
     uint8_t val = 0;
@@ -137,6 +137,7 @@ int32_t getchx(void)
     	if (val == 10) val = 13;
     return val;
 }
+#endif
 
 char *FindExtMem(uint32_t addr, int32_t num)
 {
@@ -269,7 +270,7 @@ void CheckCommand(void)
 	    pdirent = readdir(pdir);
 	    if (pdirent)
 	    {
-#ifdef LINUX
+#if 1
 		FILE *infile;
 		int32_t d_size = 0;
 		int32_t d_attr = 0;
@@ -321,7 +322,6 @@ void CheckCommand(void)
     {
 	char *path = (char *)&BYTE(parm);
 	char fullpath[200];
-	char *ptr;
 	if (path[0] == '/')
 	{
 	    strcpy(fullpath, rootdir);
@@ -330,8 +330,8 @@ void CheckCommand(void)
 	else
 	    strcpy(fullpath, path);
 
-	ptr = fullpath;
-#ifndef LINUX
+#if 0
+	char *ptr = fullpath;
 	while (*ptr)
 	{
 	    if (*ptr == '/') *ptr = 0x5c;
@@ -343,20 +343,15 @@ void CheckCommand(void)
     }
     else if (command == SYS_FILE_GETCWD)
     {
-        char *ptr;
 	char *str = (char *)&BYTE(LONG(parm));
 	int32_t num = LONG(parm+4);
-	ptr = getcwd(str, num);
+	getcwd(str, num);
 	LONG(SYS_PARM) = LONG(parm);
     }
     else if (command == SYS_FILE_MKDIR)
     {
-	//char *fname = (char *)&BYTE(parm);
-#ifdef LINUX
 #if 0
-	LONG(SYS_PARM) = mkdir(fname, S_IRWXU | S_IRWXG | S_IRWXO);
-#endif
-#else
+	char *fname = (char *)&BYTE(parm);
 	LONG(SYS_PARM) = mkdir(fname);
 #endif
     }
@@ -372,7 +367,7 @@ void CheckCommand(void)
 	    if (!pdirent) break;
 	    if (strcmp(pdirent->d_name, fname) == 0)
 	    {
-#ifdef LINUX
+#if 1
 #if 0
 		int32_t d_type = pdirent->d_type;
 		attrib = 0;
@@ -461,141 +456,130 @@ void CheckCommand(void)
     WORD(SYS_COMMAND) = 0;
 }
 
-int CheckSerialIn(void)
+void SerialInit(SerialT *serial, int pin_num, int bitcycles, int mode)
 {
-    static int state = 0;
-    static int count = 0;
-    static int val;
+    serial->flag = 0;
+    serial->state = 0;
+    serial->count = 0;
+    serial->mode = mode;
+    serial->pin_num = pin_num;
+    serial->bitcycles = bitcycles;
+}
 
-    if (state == 0)
+int SerialSend(SerialT *serial, int portval)
+{
+    int bitval;
+    int flipbit = serial->mode & 1;
+    int pin_num = serial->pin_num;
+
+    if (serial->state == 0)
     {
-	if (kbhit1())
+	if (serial->flag)
 	{
-	    val = getch();
-            if (val == 0x1d) return 1;
-	    val |= 0x300;
-            if (proptwo)
-                count = 80000000 / baudrate;
-            else
-            {
-	        count = LONG(0) / baudrate;
-                count >>= 2;
-            }
-	    //if (!proptwo) count >>= 2;
-	    pin_val &= 0x7fffffff;
-	    state = 1;
+	    serial->value |= 0x300;
+            serial->count = serial->bitcycles;
+            portval = (portval & ~(1 << pin_num)) | (flipbit << pin_num);
+	    serial->state = 1;
+           //printf("portval = %8.8x\n", portval);
 	}
     }
-    else if (--count <= 0)
+    else if (--serial->count <= 0)
     {
-	if (++state > 11)
+	if (++serial->state > 11)
 	{
-	    state = 0;
+            serial->flag = 0;
+	    serial->state = 0;
 	}
 	else
 	{
-	    pin_val = (pin_val & 0x7fffffff) | ((val & 1) << 31);
-	    val >>= 1;
-#if 0
-	    count = LONG(0) / baudrate;
-	    if (!proptwo) count >>= 2;
-#endif
-            if (proptwo)
-                count = 80000000 / baudrate;
-            else
-            {
-	        count = LONG(0) / baudrate;
-                count >>= 2;
-            }
+            bitval = (serial->value & 1) ^ flipbit;
+            portval = (portval & ~(1 << pin_num)) | (bitval << pin_num);
+	    serial->value >>= 1;
+            serial->count = serial->bitcycles;
+           //printf("portval = %8.8x\n", portval);
 	}
+    }
+    return portval;
+}
+
+int CheckSerialIn(SerialT *serial)
+{
+    int value;
+
+    if (propmode == 2)
+        pin_val_b = SerialSend(serial, pin_val_b);
+    else
+        pin_val_a = SerialSend(serial, pin_val_a);
+    if (!serial->flag && kbhit1())
+    {
+        value = getch();
+//printf("CheckSerialIn: value = %x\n", value);
+        if (value == 0x1d) return 1;
+        serial->flag = 1;
+        serial->value = value;
     }
     return 0;
 }
-
-void CheckSerialOut(void)
+        
+void SerialReceive(SerialT *serial, int portval)
 {
-    int txbit = 0;
-    static int val;
-    static int state = -2;
-    static int count;
-    //static int txbit0 = 0;
+    int bitval = ((portval >> serial->pin_num) & 1) ^ (serial->mode & 1);
 
-    txbit = (pin_val >> 30) & 1;
-
-    //if (txbit != txbit0) fprintf(stderr, "txbit = %d, loopcount = %d\n", txbit, loopcount);
-    //txbit0 = txbit;
-
-
-    if (state == -2)
+    if (serial->state == 0)
     {
-	if (txbit)
-	{
-	    state = -1;
-	    //fprintf(stderr, "Start Serial\n");
-	}
+	if (bitval)
+	    serial->state = 1;
     }
-    else if (state == -1)
+    else if (serial->state == 1)
     {
-	if (!txbit)
+	if (!bitval)
 	{
-	    val = 0;
-	    state = 0;
-#if 0
-            count = LONG(0) / baudrate;
-            if (!proptwo) count >>= 2;
-#endif
-            if (proptwo)
-                count = 80000000 / baudrate;
-            else
-            {
-	        count = LONG(0) / baudrate;
-                count >>= 2;
-            }
-	    count += count >> 1;
+	    serial->value = 0;
+	    serial->state = 2;
+            serial->count = serial->bitcycles;
+	    serial->count += serial->count >> 1;
 	}
     }
     else
     {
-	if (--count <= 0)
+	if (--serial->count <= 0)
 	{
-	    if (state > 7)
+	    if (serial->state > 9)
 	    {
-		state = -1;
-#if 1
-		if (val == 13)
-		    putchx(10);
-		else
-		    putchx(val);
-#else
-		printf("<%2.2x>\n", val);
-#endif
+                serial->flag = 1;
+		serial->state = 1;
 	    }
 	    else
 	    {
-		//fprintf(stderr, "%d", txbit);
-	        val |= txbit << state;
-#if 0
-	        count = LONG(0) / baudrate;
-	        if (!proptwo) count >>= 2;
-#endif
-                if (proptwo)
-                    count = 80000000 / baudrate;
-                else
-                {
-	            count = LONG(0) / baudrate;
-                    count >>= 2;
-                }
-		state++;
+	        serial->value |= bitval << (serial->state - 2);
+                serial->count = serial->bitcycles;
+		serial->state++;
 	    }
 	}
+    }
+}
+
+void CheckSerialOut(SerialT *serial)
+{
+    if (propmode == 2)
+        SerialReceive(serial, pin_val_b);
+    else
+        SerialReceive(serial, pin_val_a);
+    if (serial->flag)
+    {
+        serial->flag = 0;
+        if (serial->value == 13 && pstmode)
+            putchx(10);
+        else
+            putchx(serial->value);
     }
 }
 
 void PrintStack(SpinVarsT *spinvars)
 {
     int32_t dcurr = spinvars->dcurr;
-    printf("PrintStack: %4.4x %8.8x %8.8x %8.8x\n",
-        dcurr, LONG(dcurr-4), LONG(dcurr-8), LONG(dcurr-12));
+    printf("PrintStack: %4.4x %8.8x %8.8x %8.8x%s",
+        dcurr, LONG(dcurr-4), LONG(dcurr-8), LONG(dcurr-12), NEW_LINE);
 }
 
 char *bootfile;
@@ -606,10 +590,11 @@ void RebootProp(void)
     int32_t dbase;
     char *ptr;
     FILE *infile;
+    int32_t bitcycles;
 
-    if (!proptwo) memset(hubram, 0, 32768);
-    memset(lockstate, 0, 8);
-    memset(lockalloc, 0, 8);
+    if (!propmode) memset(hubram, 0, 32768);
+    memset(lockstate, 0, 16);
+    memset(lockalloc, 0, 16);
 
     chdir(rootdir);
 
@@ -625,12 +610,12 @@ void RebootProp(void)
 	  spinsim_exit(1);
 	}
 
-      i = fread(hubram, 1, 32768, infile);
+      i = fread(hubram, 1, memsize, infile);
       fclose(infile);
     }
 
     // Copy in the ROM contents
-    if (!proptwo)
+    if (!propmode)
     {
         memcpy(hubram + 32768, romdata, 32768);
         dbase = WORD(10);
@@ -643,12 +628,15 @@ void RebootProp(void)
     WORD(SYS_LOCKNUM) = 1;
     lockalloc[0] = 1;
 
-    for (i = 0; i < 8; i++) PasmVars[i].state = 0;
+    for (i = 0; i < 16; i++) PasmVars[i].state = 0;
 
     if (pasmspin)
     {
-	if (proptwo)
-            StartPasmCog2(&PasmVars[0], 0, 0x0e00, 0);
+	if (propmode == 2)
+        {
+            //StartPasmCog2(&PasmVars[0], 0, 0x0e00, 0);
+            StartPasmCog2(&PasmVars[0], 0, 0x0000, 0, 0);
+        }
 	else
             StartPasmCog(&PasmVars[0], 0x0004, 0xf004, 0);
     }
@@ -677,6 +665,16 @@ void RebootProp(void)
       methodlev = 1;
     }
 
+
+    if (baudrate)
+    {
+        if (propmode)
+            bitcycles = 60000000 / baudrate;
+        else
+            bitcycles = (LONG(0) / baudrate) >> 2;
+        SerialInit(&serial_in, 31, bitcycles, 2);
+        SerialInit(&serial_out, 30, bitcycles, 2);
+    }
     //LONG(SYS_DEBUG) = printflag;
 }
 
@@ -687,7 +685,8 @@ int step_chip(void)
     int runflag = 0;
     int breakflag = 0;
     SpinVarsT *spinvars;
-    for (i = 0; i < 8; i++)
+    if (propmode == 2) UpdateRWlongFlags();
+    for (i = 0; i < 16; i++)
     {
         state = PasmVars[i].state;
         PasmVars[i].printflag = (LONG(SYS_DEBUG) >> (i*4)) & 15;
@@ -695,22 +694,22 @@ int step_chip(void)
         {
             if (PasmVars[i].printflag && state == 5)
             {
-                if (!proptwo)
+                if (!propmode)
                 {
                     fprintf(tracefile, "Cog %d:  ", i);
                     DebugPasmInstruction(&PasmVars[i]);
                 }
             }
-            if (proptwo)
+            if (propmode == 2)
             {
                 breakflag = ExecutePasmInstruction2(&PasmVars[i]);
                 if (PasmVars[i].printflag && state == 5)
-                    fprintf(tracefile, "\n");
+                    fprintf(tracefile, NEW_LINE);
             }
             else
             {
                 ExecutePasmInstruction(&PasmVars[i]);
-                if (PasmVars[i].printflag && state == 5) printf("\n");
+                if (PasmVars[i].printflag && state == 5) fprintf(tracefile, NEW_LINE);
             }
 	    if (!breakflag &&
 		!(printbreak && PasmVars[i].printflag && state == 5))
@@ -736,13 +735,12 @@ int step_chip(void)
 
 int main(int argc, char **argv)
 {
-    char *ptr;
     char *fname = 0;
     int32_t i;
     int32_t maxloops = -1;
 
     tracefile = stdout;
-    ptr = getcwd(rootdir, 100);
+    getcwd(rootdir, 100);
 
     for (i = 1; i < argc; i++)
     {
@@ -759,18 +757,25 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Unable to open trace file %s.\n", argv[i]);
 		spinsim_exit(1);
 	    }
-	} else if (strcmp(argv[i], "-t") == 0)
+	}
+	else if (strncmp(argv[i], "-t", 2) == 0)
 	{
-            proptwo = 1;
+            propmode = 2;
 	    pasmspin = 1;
-	    memsize = 256;
+	    memsize = 512;
 	    cycleaccurate = 1;
+            fjmpflag = argv[i][2] & 1;
+            nohubslots = (argv[i][2] & 2) >> 1;
 	}
 	else if (strcmp(argv[i], "-p") == 0)
 	{
 	    pasmspin = 1;
 	    cycleaccurate = 1;
 	}
+	else if (strcmp(argv[i], "-pst") == 0)
+            pstmode = 1;
+	else if (strcmp(argv[i], "-k") == 0)
+            kludge = 1;
 	else if (strcmp(argv[i], "-s") == 0)
 	    symflag = 1;
 	else if (strcmp(argv[i], "-P") == 0)
@@ -891,15 +896,18 @@ int main(int argc, char **argv)
     if (!fname && !gdbmode && !eeprom) usage();
     
     RebootProp();
-// dbetz: not defined for Windows and a nop for anything else
-//    initialize_console_io();
+#ifndef __MINGW32__
+    initialize_console_io();
+#endif
     if (gdbmode)
 	gdb();
     else if (debugmode)
 	Debug();
     else
       RunProp(maxloops);
-//    restore_console_io();
+#ifndef __MINGW32__
+    restore_console_io();
+#endif
     if (eeprom) EEPromClose();
     if (profile) PrintStats();
     return 0;

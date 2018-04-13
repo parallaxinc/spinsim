@@ -4,7 +4,7 @@
 #undef STD_CONSOLE_INPUT
 
 int  kbhit(void);
-char getch(void);
+int  getch(void);
 void initialize_console_io(void);
 void restore_console_io(void);
 
