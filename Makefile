@@ -37,7 +37,7 @@ OPT := -O3
 CFLAGS  = -c -g -Wall -Wno-format $(OPT) -D LINUX
 
 all: directory $(SOURCES) $(OBJECTS) Makefile
-	$(CC) $(LDFLAGS) -o $(TARGET) $(OBJECTS)
+	$(CC) -o $(TARGET) $(OBJECTS) $(LDFLAGS)
 
 directory:
 	mkdir -p $(BUILD)
