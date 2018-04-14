@@ -223,13 +223,13 @@ static int32_t stream_fifo_level(PasmVarsT *pasmvars)
 #define INSTR_RFBYTE   0x0d600010
 #define INSTR_RFWORD   0x0d600011
 #define INSTR_RFLONG   0x0d600012
-#define INSTR_WFBYTE   0x0d600013
-#define INSTR_WFWORD   0x0d600014
-#define INSTR_WFLONG   0x0d600015
+#define INSTR_WFBYTE   0x0d600015
+#define INSTR_WFWORD   0x0d600016
+#define INSTR_WFLONG   0x0d600017
 #define INSTR_GETQX    0x0d600018
 #define INSTR_GETQY    0x0d600019
+#define INSTR_WAITX    0x0d60001f
 #define INSTR_WAITXXX  0x0d602024
-#define INSTR_WAITX    0x0d600028
 #define OPCODE_WMLONG  0x53
 #define OPCODE_RDBYTE  0x56
 #define OPCODE_RDWORD  0x57
@@ -1975,15 +1975,15 @@ int32_t ExecutePasmInstruction2(PasmVarsT *pasmvars)
 	}
         break;
 
-        case 5: // andn, and, or, xor, muxxx
+        case 5: // and, andn, or, xor, muxxx
 	switch (opcode & 7)
 	{
-	    case 0: // andn
-	    result = value1 & (~value2);
+	    case 0: // and
+	    result = value1 & value2;
 	    break;
 
-	    case 1: // and
-	    result = value1 & value2;
+	    case 1: // andn
+	    result = value1 & (~value2);
 	    break;
 
 	    case 2: // or
@@ -2060,7 +2060,7 @@ int32_t ExecutePasmInstruction2(PasmVarsT *pasmvars)
 	zflag = (result == 0);
 	break;
 
-        case 7: // incmod, decmod, encod, testn, test, anyb
+        case 7: // incmod, decmod, zerox, signx, encod, ones, test, testn
 	switch (opcode & 7)
 	{
             case 0: // incmod
@@ -2079,7 +2079,16 @@ int32_t ExecutePasmInstruction2(PasmVarsT *pasmvars)
 	        result = value1 - 1;
 	    break;
 
-	    case 2: // encod
+            case 2: // zerox
+            result = value1 & ~(0xfffffffe << (value2 & 31));
+            break;
+
+            case 3: // signx
+            temp = 31 - (value2 & 31);
+            result = (value1 << temp) >> temp;
+            break;
+
+	    case 4: // encod
             cflag = (value2 == 0);
             for (result = 31; result > 0; result--)
             {
@@ -2089,31 +2098,23 @@ int32_t ExecutePasmInstruction2(PasmVarsT *pasmvars)
             if (kludge) cflag = result & 1;
 	    break;
 
-            case 3: // empty
-            NotImplemented(instruct);
-            break;
-
-	    case 4: // testn
-	    result = value1 & (~value2);
-	    cflag = parity(result);
-            write_czr &= 6;
-	    break;
-
-	    case 5: // test
-	    result = value1 & value2;
-	    cflag = parity(result);
-            write_czr &= 6;
-	    break;
-
-            case 6: // anyb
+            case 5: // ones (was anyb)
 	    result = value1 | value2;
 	    cflag = parity(result);
             write_czr &= 6;
             break;
 
-            case 7: // empty
-            NotImplemented(instruct);
-            break;
+	    case 6: // test
+	    result = value1 & value2;
+	    cflag = parity(result);
+            write_czr &= 6;
+	    break;
+
+	    case 7: // testn
+	    result = value1 & (~value2);
+	    cflag = parity(result);
+            write_czr &= 6;
+	    break;
 	}
 	zflag = (result == 0);
 	break;
@@ -2166,7 +2167,7 @@ int32_t ExecutePasmInstruction2(PasmVarsT *pasmvars)
 	}
 	break;
 
-        case 9: // rolbyte, setword, getword, rolword, altxx, setx, decod, bmaks, zerox, signx, muxnits, muxnibs, muxq, movbyts
+        case 9: // rolbyte, setword, getword, rolword, altxx, setx, decod, bmaks, muxnits, muxnibs, muxq, movbyts
 	write_czr = 1;
 	temp = (instruct >> 16) & 0x18;
         switch(opcode&7)
@@ -2380,7 +2381,7 @@ int32_t ExecutePasmInstruction2(PasmVarsT *pasmvars)
             }
             break;
 
-	    case 6: // decod, bmask, zerox, signx
+	    case 6: // decod, bmask, crcbit, crcnib
             write_czr = 1;
             switch (czi >> 1)
             {
@@ -2392,13 +2393,12 @@ int32_t ExecutePasmInstruction2(PasmVarsT *pasmvars)
                 result = ~(0xfffffffe << (value2 & 0x1f));
                 break;
 
-                case 2: // zerox
-                result = value1 & ~(0xfffffffe << (value2 & 31));
+                case 2: // crcbit
+                NotImplemented(instruct);
                 break;
 
-                case 3: // signx
-                temp = 31 - (value2 & 31);
-                result = (value1 << temp) >> temp;
+                case 3: // crcnib
+                NotImplemented(instruct);
                 break;
             }
             break;
@@ -2470,15 +2470,15 @@ int32_t ExecutePasmInstruction2(PasmVarsT *pasmvars)
             zflag = (result == 0);
             break;
 
-            case 1: // sclu, scl
+            case 1: // sca, scas
             write_czr &= 2;
-            if (czi&4) // scl
+            if (czi&4) // scas
             {
 	        value1 = (value1 << 16) >> 16;
 	        value2 = (value2 << 16) >> 16;
 	        result = (value1 * value2) >> 14;
             }
-            else // sclu
+            else // sca
             {
 	        value1 &= 0xffff;
 	        value2 &= 0xffff;
@@ -2705,77 +2705,7 @@ if (streamflag) printf("\nSTREAM COLLISION\n");
             check_hubexec_mode(pasmvars);
             break;
 
-	    case 2: // ijz, ijnz, ijs, ijns
-            write_czr = 1;
-            result = value1 + 1;
-	    zflag = (result == 0);
-	    cflag = (result == 0);
-	    // Determine if we should jump
-            if (czi & 4) // ijs, ijns
-            {
-	        if (((result >> 31) & 1) != ((czi >> 1) & 1))
-	        {
-                    value2 = (value2 << 23) >> 23;
-	            pasmvars->pc = (pc + pc_incr * (1 + value2)) & ADDR_MASK;
-                    pasmvars->pc1 |= INVALIDATE_INSTR;
-                    check_hubexec_mode(pasmvars);
-	        }
-            }
-            else // ijz, ijnz
-            {
-	        if (zflag != ((czi >> 1) & 1))
-	        {
-                    value2 = (value2 << 23) >> 23;
-	            pasmvars->pc = (pc + pc_incr * (1 + value2)) & ADDR_MASK;
-                    pasmvars->pc1 |= INVALIDATE_INSTR;
-                    check_hubexec_mode(pasmvars);
-	        }
-            }
-            break;
-
-	    case 3: // djz, djnz, djs, djns
-	    case 4: // tjz, tjnz, tjs, tjns
-            if ((opcode & 7) == 3)
-            {
-                value1--;
-	        cflag = (value1 == -1);
-                write_czr = 1;
-            }
-            else
-            {
-                write_czr = 0;
-            }
-            result = value1;
-	    zflag = (result == 0);
-	    // Determine if we should jump
-            if (czi & 4) // djs, djns, tjs, tjns
-            {
-	        if (((result >> 31) & 1) != ((czi >> 1) & 1))
-	        {
-                    value2 = (value2 << 23) >> 23;
-	            pasmvars->pc = (pc + pc_incr * (1 + value2)) & ADDR_MASK;
-                    pasmvars->pc1 |= INVALIDATE_INSTR;
-                    check_hubexec_mode(pasmvars);
-	        }
-            }
-            else // djz, djnz, tjz, tjnz
-            {
-	        if (zflag != ((czi >> 1) & 1))
-	        {
-                    value2 = (value2 << 23) >> 23;
-	            pasmvars->pc = (pc + pc_incr * (1 + value2)) & ADDR_MASK;
-                    pasmvars->pc1 |= INVALIDATE_INSTR;
-                    check_hubexec_mode(pasmvars);
-	        }
-            }
-            break;
-
-	    case 5: // empty
-            NotImplemented(instruct);
-            write_czr |= 1;
-            break;
-
-	    case 6: // callpa, callpb
+	    case 2: // callpa, callpb
             if (czi&4)
                 rsltaddr = REG_PB;
             else
@@ -2793,11 +2723,91 @@ if (streamflag) printf("\nSTREAM COLLISION\n");
             check_hubexec_mode(pasmvars);
             break;
 
-	    case 7: // setpat, jint, jnint, ...
+	    case 3: // djz, djnz, djf, djnf
+            value1--;
+	    cflag = (value1 == -1);
+            write_czr = 1;
+            result = value1;
+	    zflag = (result == 0);
+	    // Determine if we should jump
+            if (czi & 4) // djf, djnf
+            {
+	        if (cflag != ((czi >> 1) & 1))
+	        {
+                    value2 = (value2 << 23) >> 23;
+	            pasmvars->pc = (pc + pc_incr * (1 + value2)) & ADDR_MASK;
+                    pasmvars->pc1 |= INVALIDATE_INSTR;
+                    check_hubexec_mode(pasmvars);
+	        }
+            }
+            else // djz, djnz
+            {
+	        if (zflag != ((czi >> 1) & 1))
+	        {
+                    value2 = (value2 << 23) >> 23;
+	            pasmvars->pc = (pc + pc_incr * (1 + value2)) & ADDR_MASK;
+                    pasmvars->pc1 |= INVALIDATE_INSTR;
+                    check_hubexec_mode(pasmvars);
+	        }
+            }
+            break;
+
+	    case 4: // ijz, ijnz, tjz, tjnz
+            if (czi&4) // tjz, tjnz
+            {
+                write_czr = 0;
+                result = value1;
+            }
+            else // ijz, ijnz
+            {
+                write_czr = 1;
+                result = value1 + 1;
+            }
+	    zflag = (result == 0);
+	    cflag = (result == 0);
+	    // Determine if we should jump
+	    if (zflag != ((czi >> 1) & 1))
+	    {
+                value2 = (value2 << 23) >> 23;
+	        pasmvars->pc = (pc + pc_incr * (1 + value2)) & ADDR_MASK;
+                pasmvars->pc1 |= INVALIDATE_INSTR;
+                check_hubexec_mode(pasmvars);
+            }
+            break;
+
+	    case 5: // tjf, tjnf, tjs, tjns
             write_czr = 0;
-            if (czi&4) // setpat
+            result = value1;
+	    zflag = (result == 0);
+	    cflag = (result == -1);
+	    // Determine if we should jump
+            if (czi & 4) // tjs, tjns
+            {
+	        if (((result >> 31) & 1) != ((czi >> 1) & 1))
+	        {
+                    value2 = (value2 << 23) >> 23;
+	            pasmvars->pc = (pc + pc_incr * (1 + value2)) & ADDR_MASK;
+                    pasmvars->pc1 |= INVALIDATE_INSTR;
+                    check_hubexec_mode(pasmvars);
+	        }
+            }
+            else // tjf, tjnf
+            {
+	        if (cflag != ((czi >> 1) & 1))
+	        {
+                    value2 = (value2 << 23) >> 23;
+	            pasmvars->pc = (pc + pc_incr * (1 + value2)) & ADDR_MASK;
+                    pasmvars->pc1 |= INVALIDATE_INSTR;
+                    check_hubexec_mode(pasmvars);
+	        }
+            }
+            break;
+
+	    case 6: // tjv, jint, jnint, ...
+            write_czr = 0;
+            if ((czi&6) == 0) // tjv
                 NotImplemented(instruct);
-            else // jint, jnint, ....
+            else if ((czi&6) == 2) // jint, jnint, ....
             {
                 temp = (value1 & 15);
                 temp = (pasmvars->intflags >> temp) & 1;
@@ -2815,6 +2825,16 @@ if (streamflag) printf("\nSTREAM COLLISION\n");
                     check_hubexec_mode(pasmvars);
                 }
             }
+            else // empty
+                NotImplemented(instruct);
+            break;
+
+	    case 7: // setpat
+            write_czr = 0;
+            if (czi&4) // setpat
+                NotImplemented(instruct);
+            else // empty
+                NotImplemented(instruct);
             break;
 #else
 	    case 0: // rdbyte
@@ -3198,8 +3218,7 @@ if (streamflag) printf("\nSTREAM COLLISION\n");
             if (srcaddr == 0x24) srcaddr = (instruct & 0x3ffff);
             switch (srcaddr)
             {
-                case 0: // clkset
-                NotImplemented(instruct);
+                case 0: // hubset - TODO Need to implement.  Ignore for now.
                 break;
 
                 case 1: // cogid
@@ -3249,18 +3268,35 @@ if (streamflag) printf("\nSTREAM COLLISION\n");
 		lockalloc[result] = 0;
 		break;
 
-		case 6: // lockclr
+		case 6: // locktry
 		result = value1 & 15;
 		zflag = (result == 0);
-		cflag = lockstate[result] & 1;
-		lockstate[result] = 0;
+                if (!lockstate[result])
+                {
+                    cflag = 1;
+                    lockstate[result] = 0x100 | pasmvars->cogid;
+                }
+                else
+                    cflag = 0;
 		break;
 
-		case 7: // lockset
-		result = value1 & 15;
-		zflag = (result == 0);
-		cflag = lockstate[result] & 1;
-		lockstate[result] = -1;
+		case 7: // lockrel
+                zflag = 0;
+		temp = value1 & 15;
+                result = lockstate[temp] & 15;
+                cflag = (lockstate[temp] != 0);
+                if (cflag && result == pasmvars->cogid)
+                {
+                    cflag = 0;
+                    lockstate[result] = 0;
+                }
+                write_czr &= 6;
+                if ((czi&4) == 0)
+                    write_czr = 0;
+                else if (czi&1)
+                    write_czr = 4;
+                else
+                    write_czr = 5;
 		break;
 
                 case 14: // qlog
@@ -3308,45 +3344,49 @@ if (streamflag) printf("\nSTREAM COLLISION\n");
                 zflag = (result == 0);
                 break;
 
-                case 19: // wfbyte
+                case 19: // rfvar
+                result = temp = 0;
+                do
+                {
+                    result |= read_stream_fifo_byte(pasmvars) << temp;
+                    temp += 7;
+                } while ((temp < 28) && (result & (1 << temp)));
+                cflag = 0;
+                zflag = (result == 0);
+                break;
+
+                case 20: // rfvars
+                result = temp = 0;
+                do
+                {
+                    result |= read_stream_fifo_byte(pasmvars) << temp;
+                    temp += 7;
+                } while ((temp < 28) && (result & (1 << temp)));
+                temp = 31 - temp;
+                result = (result << temp) >> temp;
+                cflag = (result >> 31) & 1;
+                zflag = (result == 0);
+                break;
+
+                case 21: // wfbyte
                 write_czr = 0;
                 write_stream_fifo_byte(pasmvars, value1);
                 if (pasmvars->printflag > 1)
 	            fprintf(tracefile, ", fifo = %2.2x", value1);
                 break;
 
-                case 20: // wfword
+                case 22: // wfword
                 write_czr = 0;
                 write_stream_fifo_word(pasmvars, value1);
                 if (pasmvars->printflag > 1)
 	            fprintf(tracefile, ", fifo = %4.4x", value1);
                 break;
 
-                case 21: // wflong
+                case 23: // wflong
                 write_czr = 0;
                 write_stream_fifo_long(pasmvars, value1);
                 if (pasmvars->printflag > 1)
 	            fprintf(tracefile, ", fifo = %8.8x", value1);
-                break;
-
-                case 22: // setq
-                write_czr &= 6;
-                pasmvars->qreg = value1;
-                pasmvars->memflag = 1;
-                pasmvars->phase = 0;
-                pasmvars->skip_mask >>= 1;
-                //printf("qreg = %d\n", value1);
-                return breakflag;
-                break;
-
-                case 23: // setq2
-                write_czr &= 6;
-                pasmvars->qreg = value1;
-                pasmvars->memflag = 2;
-                pasmvars->phase = 0;
-                pasmvars->skip_mask >>= 1;
-                //printf("qreg = %d\n", value1);
-                return breakflag;
                 break;
 
                 case 24: // getqx
@@ -3375,12 +3415,12 @@ if (streamflag) printf("\nSTREAM COLLISION\n");
                 NotImplemented(instruct);
                 break;
 
-                case 30: // getxcos
+                case 30: // getxacc
                 NotImplemented(instruct);
                 break;
 
-                case 31: // getxsin
-                NotImplemented(instruct);
+                case 31: // waitx
+                write_czr &= 6;
                 break;
 
                 case 32: // setse1
@@ -3482,8 +3522,24 @@ if (streamflag) printf("\nSTREAM COLLISION\n");
                 write_czr &= 6;
                 break;
 
-                case 40: // waitx
+                case 40: // setq
                 write_czr &= 6;
+                pasmvars->qreg = value1;
+                pasmvars->memflag = 1;
+                pasmvars->phase = 0;
+                pasmvars->skip_mask >>= 1;
+                //printf("qreg = %d\n", value1);
+                return breakflag;
+                break;
+
+                case 41: // setq2
+                write_czr &= 6;
+                pasmvars->qreg = value1;
+                pasmvars->memflag = 2;
+                pasmvars->phase = 0;
+                pasmvars->skip_mask >>= 1;
+                //printf("qreg = %d\n", value1);
+                return breakflag;
                 break;
 
                 case 42: // push
@@ -3632,6 +3688,7 @@ if (streamflag) printf("\nSTREAM COLLISION\n");
                 zflag = (result = 0);
                 break;
 
+#if 0
                 case 53: // getint
                 result = pasmvars->intflags;
                 result |= (pasmvars->intstate &  2) << 15;
@@ -3640,8 +3697,16 @@ if (streamflag) printf("\nSTREAM COLLISION\n");
                 result |= (pasmvars->intstate &  8) << 18;
                 zflag = (result = 0);
                 break;
+#else
+                case 53: // getbrk, cogbrk
+                if (czi & 6) // getbrk
+                    NotImplemented(instruct);
+                else         // cogbrk
+                    NotImplemented(instruct);
+                break;
+#endif
 
-                case 54: // setbrk
+                case 54: // brk
                 NotImplemented(instruct);
                 break;
 
@@ -4336,30 +4401,6 @@ if (streamflag) printf("\nSTREAM COLLISION\n");
                 }
                 else // wrnz
                     result = zflag ^ 1;
-                break;
-
-                case 112: // rfvar
-                result = temp = 0;
-                do
-                {
-                    result |= read_stream_fifo_byte(pasmvars) << temp;
-                    temp += 7;
-                } while ((temp < 28) && (result & (1 << temp)));
-                cflag = 0;
-                zflag = (result == 0);
-                break;
-
-                case 113: // rfvars
-                result = temp = 0;
-                do
-                {
-                    result |= read_stream_fifo_byte(pasmvars) << temp;
-                    temp += 7;
-                } while ((temp < 28) && (result & (1 << temp)));
-                temp = 31 - temp;
-                result = (result << temp) >> temp;
-                cflag = (result >> 31) & 1;
-                zflag = (result == 0);
                 break;
 
                 default:

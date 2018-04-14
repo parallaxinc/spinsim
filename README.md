@@ -1,6 +1,6 @@
-Spinsim 0.97
+Spinsim 0.98
 
-This version of spinsim supports most of the opcodes in the P2 v20 instruction
+This version of spinsim supports most of the opcodes in the P2 v32a instruction
 set.  The opcodes that are not supported are as follows:
 
   xzero   xinit   xcont   clkset  setdacs setxfrq getxcos getxsin

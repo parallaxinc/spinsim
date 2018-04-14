@@ -32,9 +32,9 @@ static char *group1[] = {
     "cmp", "cmpx", "cmps", "cmpsx", "cmpr", "cmpm", "subr", "cmpsub",
     "fge", "fle", "fges", "fles", "sumc", "sumnc", "sumz", "sumnz",
     "bitl", "bith", "bitc", "bitnc", "bitz", "bitnz", "bitrnd", "bitnot",
-    "andn", "and", "or", "xor", "muxc", "muxnc", "muxz", "muxnz",
+    "and", "andn", "or", "xor", "muxc", "muxnc", "muxz", "muxnz",
     "mov", "not", "abs", "neg", "negc", "negnc", "negz", "negnz",
-    "incmod", "decmod", "encod", "invalid", "testn", "test", "anyb", "invalid"};
+    "incmod", "decmod", "zerox", "signx", "encod", "ones", "test", "testn"};
 
 static char *group2[] = {
     "setnib", "setnib", "setnib", "setnib", "setnib", "setnib", "setnib", "setnib",
@@ -44,15 +44,14 @@ static char *group2[] = {
     "rolbyte", "rolbyte", "rolbyte", "rolbyte", "setword", "setword", "getword", "getword",
     "rolword", "rolword", "altsn", "altgn", "altsb", "altgb", "altsw", "altgw",
     "altr", "altd", "alts", "altb", "alti", "setr", "setd", "sets",
-    "decod", "bmask", "zerox", "signx", "muxnits", "muxnibs", "muxq", "movbyts",
-    "mul", "mul", "muls", "muls", "sclu", "sclu", "scl", "scl",
+    "decod", "bmask", "crcbit", "crcnib", "muxnits", "muxnibs", "muxq", "movbyts",
+    "mul", "mul", "muls", "muls", "sca", "sca", "scas", "scas",
     "addpix", "mulpix", "blnpix", "mixpix", "addct1", "addct2", "addct3", "wmlong",
     "rqpin", "rdpin", "rqpin", "rdpin", "rdlut", "rdlut", "rdlut", "rdlut",
     "rdbyte", "rdbyte", "rdbyte", "rdbyte", "rdword", "rdword", "rdword", "rdword",
     "rdlong", "rdlong", "rdlong", "rdlong", "calld", "calld", "calld", "calld",
-    "ijz", "ijnz", "ijs", "ijns", "djz", "djnz", "djs", "djns",
-    "tjz", "tjnz", "tjs", "tjns", "invalid", "invalid", "invalid", "invalid",
-    "callpa", "callpa", "callpb", "callpb"};
+    "callpa", "callpa", "callpb", "callpb", "djz", "djnz", "djf", "djnf",
+    "ijz", "ijnz", "tjz", "tjnz", "tjf", "tjnf", "tjs", "tjns", "tjv"};
 
 static char *group3[] = {
     "jint", "jct1", "jct2", "jct3", "jse1", "jse2", "jse3", "jse4",
@@ -68,10 +67,10 @@ static char *group5[] = {
     "qmul", "qdiv", "qfrac", "qsqrt", "qrotate", "qvector"};
 
 static char *group6[] = {
-    "clkset", "cogid", "invalid", "cogstop", "locknew", "lockret", "lockclr", "lockset",
+    "hubset", "cogid", "invalid", "cogstop", "locknew", "lockret", "locktry", "lockrel",
     "invalid", "invalid", "invalid", "invalid", "invalid", "invalid", "qlog", "qexp",
-    "rfbyte", "rfword", "rflong", "wfbyte", "wfword", "wflong", "setq", "setq2",
-    "getqx", "getqy", "getct", "getrnd", "setdacs", "setxfrq", "getxcos", "getxsin",
+    "rfbyte", "rfword", "rflong", "rfvar", "rfvars", "wfbyte", "wfword", "wflong",
+    "getqx", "getqy", "getct", "getrnd", "setdacs", "setxfrq", "getxacc", "waitx",
     "setse1", "setse2", "setse3", "setse4"};
 
 static char immd6[] = {
@@ -90,16 +89,15 @@ static char *group7[] = {
 
 static char *group8[] = {
     "setint1", "setint2", "setint3",
-    "waitx", "invalid", "push", "pop", "jmp", "call", "calla", "callb",
-    "jmprel", "skip", "skipf", "execf", "getptr", "getint", "setbrk", "setluts",
+    "setq", "setq2", "push", "pop", "jmp", "call", "calla", "callb",
+    "jmprel", "skip", "skipf", "execf", "getptr", "getbrk", "brk", "setluts",
     "setcy", "setci", "setcq", "setcfrq", "setcmod", "setpix", "setpiv", "cogatn",
     "dirl", "dirh", "dirc", "dirnc", "dirz", "dirnz", "dirrnd", "dirnot",
     "outl", "outh", "outc", "outnc", "outz", "outnz", "outrnd", "outnot",
     "fltl", "flth", "fltc", "fltnc", "fltz", "fltnz", "fltrnd", "fltnot",
     "drvl", "drvh", "drvc", "drvnc", "drvz", "drvnz", "drvrnd", "drvnot",
     "splitb", "mergeb", "splitw", "mergew", "seussf", "seussr", "rgbsqz", "rgbexp",
-    "xoro32", "rev", "rczr", "rczl", "wrc", "wrnc", "wrz", "wrnz",
-    "rfvar", "rfvars"};
+    "xoro32", "rev", "rczr", "rczl", "wrc", "wrnc", "wrz", "wrnz"};
 
 static char immd8[] = {
     1, 1, 1,
@@ -111,8 +109,7 @@ static char immd8[] = {
     7, 7, 7, 7, 7, 7, 7, 7,
     7, 7, 7, 7, 7, 7, 7, 7,
     0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 6, 6, 0, 0, 0, 0,
-    6, 6};
+    0, 0, 6, 6, 0, 0, 0, 0};
 
 
 static char *group9[] = {
@@ -168,7 +165,7 @@ char *GetOpname2(unsigned int instr, int *pczi, int *pformat, int *perrflag)
             strcpy(name, group1[opcode]);
         *pczi = 6;
     }
-    else if (opcode <= 0x5e)
+    else if (opcode < 0x5e)
     {
         int index = ((opcode - 0x40) << 2) + czflags;
         if (index < 24)
@@ -191,22 +188,38 @@ char *GetOpname2(unsigned int instr, int *pczi, int *pformat, int *perrflag)
         else
             *pczi = 0;
     }
-    else if (opcode == 0x5f)
+    else if (opcode == 0x5e)
     {
         if (cflag == 0)
         {
-            if (dfield > 0x1f)
-                strcpy(name, "invalid");
+            if (zflag)
+            {
+                if (dfield > 0x1f)
+                    strcpy(name, "invalid");
+                else
+                {
+                    strcpy(name, group3[dfield]);
+                    if (!zflag)
+                        *perrflag = OPCODE_BAD_BITS;
+                }
+                *pformat = OP_ONEREL9;
+            }
             else
             {
-                strcpy(name, group3[dfield]);
-                if (!zflag)
-                    *perrflag = OPCODE_BAD_BITS;
+                strcpy(name, "tjv");
+                *pformat = OP_TWOREL9;
             }
-            *pformat = OP_ONEREL9;
         }
         else
+            strcpy(name, "invalid");
+        *pczi = 0;
+    }
+    else if (opcode == 0x5f)
+    {
+        if (cflag)
             strcpy(name, group4);
+        else
+            strcpy(name, "invalid");
         *pczi = 0;
     }
     else if (opcode <= 0x6a)
@@ -282,7 +295,7 @@ char *GetOpname2(unsigned int instr, int *pczi, int *pformat, int *perrflag)
             strcpy(name, "modcz");
             *pczi = 6;
         }
-        else if (sfield > 0x71)
+        else if (sfield > 0x6f)
         {
             strcpy(name, "invalid");
             *pczi = 0;
@@ -358,6 +371,7 @@ int InvalidAddress(int hubmode, int pc, int offset)
         int target = (pc >> 2) + offset;
         invalid = (target < 0 || target >= 0x400);
     }
+
 
     return invalid;
 }
@@ -436,7 +450,7 @@ void Disassemble2(int32_t instruct, int32_t pc, char *outstr, int *perrflag)
     }
 
     dflag = ((czi & 1) && (opcode == 0x6b)) ||
-            ((czi & 2) && (opcode == 0x5d || opcode == 0x5e || (opcode == 0x5f && (czi & 4)) || (opcode >= 0x60 && opcode <= 0x6a)));
+            ((czi & 2) && (opcode == 0x5a || opcode == 0x5e || (opcode == 0x5f && (czi & 4)) || (opcode >= 0x60 && opcode <= 0x6a)));
 
     // Check for extended address instructions
     if (opcode >= 0x6c)

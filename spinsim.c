@@ -1,7 +1,7 @@
 /*******************************************************************************
 ' Author: Dave Hein
-' Version 0.97
-' Copyright (c) 2010 - 2017
+' Version 0.98
+' Copyright (c) 2010 - 2018
 ' See end of file for terms of use.
 '******************************************************************************/
 #include <stdio.h>
@@ -99,7 +99,7 @@ void spinsim_exit(int32_t exitcode)
 
 void usage(void)
 {
-    fprintf(stderr, "Spinsim Version 0.97\n");
+    fprintf(stderr, "Spinsim Version 0.98\n");
     fprintf(stderr, "usage: spinsim [options] file\n");
     fprintf(stderr, "The options are as follows:\n");
     fprintf(stderr, "     -v# Set verbosity level\n");
@@ -669,7 +669,7 @@ void RebootProp(void)
     if (baudrate)
     {
         if (propmode)
-            bitcycles = 60000000 / baudrate;
+            bitcycles = 80000000 / baudrate;
         else
             bitcycles = (LONG(0) / baudrate) >> 2;
         SerialInit(&serial_in, 31, bitcycles, 2);
