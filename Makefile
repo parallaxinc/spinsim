@@ -7,6 +7,7 @@ ifeq ($(CROSS),win32)
   CXX=i686-w64-mingw32-g++
   EXT=.exe
   BUILD=./build-win32
+  OS=msys
 else ifeq ($(CROSS),rpi)
   CC=arm-linux-gnueabihf-gcc
   CXX=arm-linux-gnueabihf-g++
