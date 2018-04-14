@@ -32,7 +32,7 @@ OBJECTS = $(patsubst %,$(BUILD)/%, $(SOURCES:.c=.o))
 # I'm not sure why these linker flags were being used but the break the build on Mac OS X so I've
 # commented them out for the time being
 #LDFLAGS = -Wl,--relax -Wl,--gc-sections
-LDFLAGS =
+LDFLAGS = -lm
 OPT := -O3
 CFLAGS  = -c -g -Wall -Wno-format $(OPT) -D LINUX
 
