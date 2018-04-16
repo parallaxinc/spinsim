@@ -24,8 +24,10 @@ TARGET = $(BUILD)/spinsim$(EXT)
 
 SOURCES = spinsim.c spininterp.c spindebug.c pasmsim.c pasmdebug.c pasmsim2.c pasmdebug2.c eeprom.c debug.c gdb.c disasm2.c
 
+ifneq ($(MSYSTEM),MINGW32)
 ifneq ($(OS),msys)
 SOURCES += conion.c
+endif
 endif
 
 OBJECTS = $(patsubst %,$(BUILD)/%, $(SOURCES:.c=.o))
