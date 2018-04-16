@@ -1670,6 +1670,7 @@ int32_t ExecutePasmInstruction2(PasmVarsT *pasmvars)
         case 1: // addxx, subxx
 	switch (opcode & 7)
 	{
+            int64_t d_result;
 	    case 0: // add
 	    result = value1 + value2;
 	    cflag = (((value1 & value2) | ((value1 | value2) & (~result))) >> 31) & 1;
@@ -1683,15 +1684,27 @@ int32_t ExecutePasmInstruction2(PasmVarsT *pasmvars)
 	    break;
 
 	    case 2: // adds
+#ifdef OLD_SIGNED_CFLAG
 	    result = value1 + value2;
 	    cflag = (((~(value1 ^ value2)) & (value1 ^ result)) >> 31) & 1;
+#else
+            d_result = (int64_t)value1 + (int64_t)value2;
+            result = (int32_t)d_result;
+            cflag = (int32_t)(d_result >> 32) & 1;
+#endif
 	    zflag = (result == 0);
             if (kludge) cflag = 0;
 	    break;
 
 	    case 3: // addsx
+#ifdef OLD_SIGNED_CFLAG
 	    result = value1 + value2 + cflag;
-	    cflag = (((~(value1 ^ value2)) & (value1 ^ result)) >> 31) & 1;
+            cflag = ((value1 ^ value2) & 0x80000000) ? ((result >> 31) & 1) : ((value1 >> 31) & 1);
+#else
+            d_result = (int64_t)value1 + (int64_t)value2 + (int64_t)cflag;
+            result = (int32_t)d_result;
+            cflag = (int32_t)(d_result >> 32) & 1;
+#endif
 	    zflag = (result == 0) & zflag;
             if (kludge) cflag = 0;
 	    break;
@@ -1711,15 +1724,27 @@ int32_t ExecutePasmInstruction2(PasmVarsT *pasmvars)
 	    break;
 
 	    case 6: // subs
+#ifdef OLD_SIGNED_CFLAG
 	    result = value1 - value2;
 	    cflag = (((value1 ^ value2) & (value1 ^ result)) >> 31) & 1;
+#else
+            d_result = (int64_t)value1 - (int64_t)value2;
+            result = (int32_t)d_result;
+            cflag = (int32_t)(d_result >> 32) & 1;
+#endif
 	    zflag = (result == 0);
             if (kludge) cflag = 0;
 	    break;
 
 	    case 7: // subsx
+#ifdef OLD_SIGNED_CFLAG
 	    result = value1 - value2 - cflag;
 	    cflag = (((value1 ^ value2) & (value1 ^ result)) >> 31) & 1;
+#else
+            d_result = (int64_t)value1 - (int64_t)value2 - (int64_t)cflag;
+            result = (int32_t)d_result;
+            cflag = (int32_t)(d_result >> 32) & 1;
+#endif
 	    zflag = (result == 0) & zflag;
             if (kludge) cflag = 0;
 	    break;
@@ -1791,6 +1816,7 @@ int32_t ExecutePasmInstruction2(PasmVarsT *pasmvars)
         case 3: // fge, fle, fges, fles, sumxx
         switch (opcode & 7)
         {
+            int64_t d_result;
 	    case 0: // fge
 	    cflag = (((uint32_t)value1) < ((uint32_t)value2));
 	    result = cflag ? value2 : value1;
@@ -1812,30 +1838,54 @@ int32_t ExecutePasmInstruction2(PasmVarsT *pasmvars)
 	    break;
 
 	    case 4: // sumc
+#ifdef OLD_SIGNED_CFLAG
 	    result = cflag ? value1 - value2 : value1 + value2;
 	    cflag = (~cflag) << 31;
 	    cflag = (((cflag ^ value1 ^ value2) & (value1 ^ result)) >> 31) & 1;
+#else
+	    d_result = cflag ? (int64_t)value1 - (int64_t)value2 : (int64_t)value1 + (int64_t)value2;
+            result = (int32_t)d_result;
+            cflag = (int32_t)(d_result >> 32) & 1;
+#endif
             if (kludge) cflag = 0;
 	    break;
 
 	    case 5: // sumnc
+#ifdef OLD_SIGNED_CFLAG
 	    result = cflag ? value1 + value2 : value1 - value2;
 	    cflag = cflag << 31;
 	    cflag = (((cflag ^ value1 ^ value2) & (value1 ^ result)) >> 31) & 1;
+#else
+	    d_result = cflag ? (int64_t)value1 + (int64_t)value2 : (int64_t)value1 - (int64_t)value2;
+            result = (int32_t)d_result;
+            cflag = (int32_t)(d_result >> 32) & 1;
+#endif
             if (kludge) cflag = 0;
 	    break;
 
 	    case 6: // sumz
+#ifdef OLD_SIGNED_CFLAG
 	    result = zflag ? value1 - value2 : value1 + value2;
 	    cflag = (~zflag) << 31;
 	    cflag = (((cflag ^ value1 ^ value2) & (value1 ^ result)) >> 31) & 1;
+#else
+	    d_result = zflag ? (int64_t)value1 - (int64_t)value2 : (int64_t)value1 + (int64_t)value2;
+            result = (int32_t)d_result;
+            cflag = (int32_t)(d_result >> 32) & 1;
+#endif
             if (kludge) cflag = 0;
 	    break;
 
 	    case 7: // sumnz
+#ifdef OLD_SIGNED_CFLAG
 	    result = zflag ? value1 + value2 : value1 - value2;
 	    cflag = zflag << 31;
 	    cflag = (((cflag ^ value1 ^ value2) & (value1 ^ result)) >> 31) & 1;
+#else
+	    d_result = zflag ? (int64_t)value1 + (int64_t)value2 : (int64_t)value1 - (int64_t)value2;
+            result = (int32_t)d_result;
+            cflag = (int32_t)(d_result >> 32) & 1;
+#endif
             if (kludge) cflag = 0;
 	    break;
 
@@ -2086,10 +2136,11 @@ int32_t ExecutePasmInstruction2(PasmVarsT *pasmvars)
             case 3: // signx
             temp = 31 - (value2 & 31);
             result = (value1 << temp) >> temp;
+            cflag = (result >> 31) & 1;
             break;
 
 	    case 4: // encod
-            cflag = (value2 == 0);
+            cflag = (value2 != 0);
             for (result = 31; result > 0; result--)
             {
                 if (value2 & 0x80000000) break;
@@ -2098,10 +2149,14 @@ int32_t ExecutePasmInstruction2(PasmVarsT *pasmvars)
             if (kludge) cflag = result & 1;
 	    break;
 
-            case 5: // ones (was anyb)
-	    result = value1 | value2;
-	    cflag = parity(result);
-            write_czr &= 6;
+            case 5: // ones
+            result = 0;
+            for (i = 0; i < 32; i++)
+            {
+                result += (value2 & 1);
+                value2 >>= 1;
+            }
+            cflag = (result & 1);
             break;
 
 	    case 6: // test
@@ -2510,8 +2565,8 @@ int32_t ExecutePasmInstruction2(PasmVarsT *pasmvars)
                 case 1: // mulpix
                 for (i = 0; i < 4; i++)
                 {
-                    temp = (value1 & 255) * (value2 &255);
-                    temp += (temp + 255) >> 8;
+                    temp = (value1 & 255) * (value2 & 255);
+                    temp = (temp + 255) >> 8;
                     result = ((uint32_t)result >> 8) | (temp << 24);
                     value1 >>= 8;
                     value2 >>= 8;
@@ -2523,9 +2578,17 @@ int32_t ExecutePasmInstruction2(PasmVarsT *pasmvars)
                 dmix = (smix ^ 255);
                 for (i = 0; i < 4; i++)
                 {
+#if 1
                     temp = (value1 & 255) * dmix;
                     temp += (value2 & 255) * smix;
                     temp = (temp + 255) >> 8;
+#else
+                    dmix = 256 - smix;
+                    temp = (value1 & 255) * dmix;
+                    temp += (value2 & 255) * smix;
+                    temp = (temp + 255) >> 8;
+                    if (temp > 255) temp = 255;
+#endif
                     result = ((uint32_t)result >> 8) | (temp << 24);
                     value1 >>= 8;
                     value2 >>= 8;
@@ -3734,12 +3797,12 @@ if (streamflag) printf("\nSTREAM COLLISION\n");
                 NotImplemented(instruct);
                 break;
 
-                case 61: // setpix
-                pasmvars->mixpix_mode = value1 & 63;
+                case 61: // setpiv
+                pasmvars->blnpix_var = value1 & 255;
                 break;
 
-                case 62: // setpiv
-                pasmvars->blnpix_var = value1 & 255;
+                case 62: // setpix
+                pasmvars->mixpix_mode = value1 & 63;
                 break;
 
                 case 63: // cogatn

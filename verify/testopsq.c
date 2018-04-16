@@ -13,17 +13,17 @@
 #define MAX_NEG1   0x80000001
 #define WZ_BIT     0x00080000
 #define WC_BIT     0x00100000
-#define SETQ_INSTR 0xfd601016
-#define SETPIX_INS 0xfd60103d
-#define SETPIV_INS 0xfd60103e
-#define SCLU_INSTR 0xfa20100a
-#define SCL_INSTR  0xfa30100a
+#define SETQ_INSTR 0xfd601028
+#define SETPIV_INS 0xfd60103d
+#define SETPIX_INS 0xfd60103e
+#define SCA_INSTR  0xfa20100a
+#define SCAS_INSTR 0xfa30100a
 
 void testit(int *);
 
 char *opcodeName[] = {
     "qmul", "qdiv", "qfrac", "qsqrt", "qrotate", "qvector", "qlog", "qexp",
-    "muxq", "blnpix", "mixpix", "sclu", "scl"
+    "muxq", "blnpix", "mixpix", "sca", "scas"
     };
 
 int instruct[] = {
@@ -38,7 +38,7 @@ int dnum[] = { NUM_VALUES, NUM_VALUES, NUM_VALUES, NUM_VALUES, NUM_VALUES, NUM_V
 int qnum[] = { 1, NUM_VALUES, NUM_VALUES, NUM_VALUES, 1, NUM_VALUES, 1, 1,
                NUM_VALUES, NUM_VALUES, NUM_VALUES, NUM_VALUES, NUM_VALUES};
 int inst[] = { SETQ_INSTR, SETQ_INSTR, SETQ_INSTR, SETQ_INSTR, SETQ_INSTR, SETQ_INSTR, SETQ_INSTR, SETQ_INSTR,
-               SETQ_INSTR, SETPIV_INS, SETPIX_INS, SCLU_INSTR, SCL_INSTR};
+               SETQ_INSTR, SETPIV_INS, SETPIX_INS, SCA_INSTR, SCAS_INSTR};
 
 int test_values[38] = { 0, 1, 2, 0x7fffffff, 0x80000000, 0x80000001, 0xfffffffe, 0xffffffff,
     4, 8, 0x10, 0x20, 0x40, 0x80, 0x100, 0x200, 0x400, 0x800, 0x1000, 0x2000, 0x4000, 0x8000,

@@ -91,7 +91,7 @@ static char *group8[] = {
     "setint1", "setint2", "setint3",
     "setq", "setq2", "push", "pop", "jmp", "call", "calla", "callb",
     "jmprel", "skip", "skipf", "execf", "getptr", "getbrk", "brk", "setluts",
-    "setcy", "setci", "setcq", "setcfrq", "setcmod", "setpix", "setpiv", "cogatn",
+    "setcy", "setci", "setcq", "setcfrq", "setcmod", "setpiv", "setpix", "cogatn",
     "dirl", "dirh", "dirc", "dirnc", "dirz", "dirnz", "dirrnd", "dirnot",
     "outl", "outh", "outc", "outnc", "outz", "outnz", "outrnd", "outnot",
     "fltl", "flth", "fltc", "fltnc", "fltz", "fltnz", "fltrnd", "fltnot",

@@ -1,11 +1,11 @@
 Spinsim 0.98
 
-This version of spinsim supports most of the opcodes in the P2 v32a instruction
+This version of spinsim supports most of the opcodes in the P2 v32b instruction
 set.  The opcodes that are not supported are as follows:
 
-  xzero   xinit   xcont   clkset  setdacs setxfrq getxcos getxsin
-  setbrk  setcy   setci   setcq   setcfrq setcmod getrnd  xoro32
-  skip    skipf   execf 
+  xzero   xinit   xcont   hubset  setdacs setxfrq getxacc getbrk
+  cogbrk  brk     setcy   setci   setcq   setcfrq setcmod getrnd
+  xoro32  skip    skipf   execf 
 
 skip, skipf and execf have been partially implemented, but do not handle jumps
 or interrupts correctly.
@@ -23,8 +23,8 @@ make.  The Windows executable, spinsim.exe is included with this distribution.
 The sub-directory verify contains five programs that have been used to test
 spinsim against the FPGA implementation.  Approximately 150 instructions have
 been verified to match the hardware.  The verify directory contains the
-original C source code and the binary each of the five programs.  It also
-contains the output from running the test programs on the FPGA.
+original C source code and the output from running the test programs on the
+FPGA.
 
 A test program can be run by going into the verify directory and typing
 
