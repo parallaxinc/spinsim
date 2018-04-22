@@ -74,10 +74,10 @@ static char *group6[] = {
     "setse1", "setse2", "setse3", "setse4"};
 
 static char immd6[] = {
-    5, 5, 0, 1, 4, 1, 5, 5,
+    1, 5, 0, 1, 4, 1, 5, 5,
     0, 0, 0, 0, 0, 0, 1, 1,
-    6, 6, 6, 1, 1, 1, 1, 1,
-    6, 6, 0, 6, 1, 1, 0, 0,
+    6, 6, 6, 6, 6, 1, 1, 1,
+    6, 6, 0, 7, 1, 1, 0, 1,
     1, 1, 1, 1};
 
 static char *group7[] = {
@@ -111,7 +111,6 @@ static char immd8[] = {
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 6, 6, 0, 0, 0, 0};
 
-
 static char *group9[] = {
     "jmp", "call", "calla", "callb", "calld", "calld", "calld", "calld",
     "loc", "loc", "loc", "loc", "augs", "augs", "augs", "augs",
@@ -136,7 +135,7 @@ static char *group9[] = {
 #define OP_TWOPTR1   16
 #define OP_TWOPTR2   17
 
-char *GetOpname2(unsigned int instr, int *pczi, int *pformat, int *perrflag)
+char *GetOpname2(unsigned int instr, int *pczi, int *pformat, int *perrflag, int hubmode)
 {
     int opcode = (instr >> 21) & 0x7f;
     static char name[100];
@@ -241,6 +240,13 @@ char *GetOpname2(unsigned int instr, int *pczi, int *pformat, int *perrflag)
             strcpy(name, group6[sfield]);
             if (((instr >> 18) & ~immd6[sfield]) & 7)
                 *perrflag = OPCODE_BAD_BITS;
+            if (sfield == 27 && ((instr >> 18) & 1)) // getrnd
+            {
+                if ((instr >> 9) & 0x1ff)
+                    *perrflag = OPCODE_BAD_BITS;
+                else
+                    *pformat = OP_NOPARMS;
+            }
         }
         else if (sfield == 0x24)
         {
@@ -250,9 +256,17 @@ char *GetOpname2(unsigned int instr, int *pczi, int *pformat, int *perrflag)
             else
                 strcpy(name, group7[dfield]);
             if (dfield <= 0x1e)
+            {
                 *pczi = 6;
+                if ((instr >> 18) & 1)
+                    *perrflag = OPCODE_BAD_BITS;
+            }
             else
+            {
                 *pczi = 0;
+                if ((instr >> 18) & 7)
+                    *perrflag = OPCODE_BAD_BITS;
+            }
         }
         else if (sfield == 0x2d && lflag)
         {
@@ -314,7 +328,11 @@ char *GetOpname2(unsigned int instr, int *pczi, int *pformat, int *perrflag)
         if (opcode >= 0x78)
             *pformat = OP_AUGPARMS;
         else if (opcode >= 0x70)
+        {
             *pformat = OP_LOCPARMS;
+            if (!hubmode && (instr & 0x00100000) && (instr & 3))
+                *perrflag = OPCODE_BAD_BITS;
+        }
         else
             *pformat = OP_BIGJMP;
 	*pczi = 0;
@@ -469,7 +487,7 @@ void Disassemble2(int32_t instruct, int32_t pc, char *outstr, int *perrflag)
         }
     }
 
-    strcpy(opstr, GetOpname2(instruct, &czi_mask, &format, perrflag));
+    strcpy(opstr, GetOpname2(instruct, &czi_mask, &format, perrflag, hubmode));
     //if (errflag == OPCODE_BAD_BITS) strcpy(opstr, "invalid");
 
     czi &= czi_mask;
