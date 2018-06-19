@@ -1,6 +1,6 @@
 /*******************************************************************************
 ' Author: Dave Hein
-' Version 0.98+
+' Version 0.99
 ' Copyright (c) 2010 - 2018
 ' See end of file for terms of use.
 '******************************************************************************/
@@ -99,7 +99,7 @@ void spinsim_exit(int32_t exitcode)
 
 void usage(void)
 {
-    fprintf(stderr, "Spinsim Version 0.98+\n");
+    fprintf(stderr, "Spinsim Version 0.99\n");
     fprintf(stderr, "usage: spinsim [options] file\n");
     fprintf(stderr, "The options are as follows:\n");
     fprintf(stderr, "     -v# Set verbosity level\n");
