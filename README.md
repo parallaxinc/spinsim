@@ -1,4 +1,4 @@
-Spinsim 0.98
+Spinsim 0.99
 
 This version of spinsim supports most of the opcodes in the P2 v32b instruction
 set.  The opcodes that are not supported are as follows:
