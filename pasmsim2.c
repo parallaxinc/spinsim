@@ -1372,6 +1372,7 @@ int32_t ExecutePasmInstruction2(PasmVarsT *pasmvars)
 	{
 	    if (!pasmvars->repforever) pasmvars->repcnt--;
 	    pasmvars->pc = pasmvars->repbot;
+            check_hubexec_mode(pasmvars);
 	}
 	else
         {
@@ -3107,9 +3108,12 @@ if (streamflag) printf("\nSTREAM COLLISION\n");
             case 6: // xcont, rep
             if (czi & 4) // rep
             {
-                pasmvars->repcnt = value2;
-                pasmvars->repbot = pasmvars->pc;
-                pasmvars->reptop = (pasmvars->pc + value1) & ADDR_MASK;
+                pasmvars->repcnt = value2 - 1;
+                pasmvars->repbot = pasmvars->pc1;
+                if (value2 == 0) pasmvars->repforever = 1;
+                if (pasmvars->pc >= 0x400) value1 <<= 2;
+                pasmvars->reptop = (pasmvars->pc2 + value1) & ADDR_MASK;
+                write_czr = 0;
             }
             else // xcont
 		NotImplemented(instruct);
