@@ -77,6 +77,7 @@ int32_t kludge = 0;
 
 FILE *logfile = NULL;
 FILE *tracefile = NULL;
+FILE *serialfile = NULL;
 FILE *cmdfile = NULL;
 
 PasmVarsT PasmVars[16];
@@ -112,6 +113,7 @@ void usage(void)
     //fprintf(stderr, "     -c  Enable cycle-accurate mode for pasm cogs\n");
     fprintf(stderr, "     -t# Enable the Prop 2 mode.  # specifies options\n");
     fprintf(stderr, "     -b# Enable the serial port and set the baudrate to # (default 115200)\n");
+    fprintf(stderr, "     -B <filename>  Redirects serial output to filename\n");
     fprintf(stderr, "     -gdb Operate as a GDB target over stdin/stdout\n");
     fprintf(stderr, "     -L <filename> Log GDB remote comm to <filename>\n");
     fprintf(stderr, "     -r <filename> Replay GDB session from <filename>\n");
@@ -126,6 +128,12 @@ void putchx(int32_t val)
 {
     putchar(val);
     fflush(stdout);
+}
+
+void putschx(int32_t val)
+{
+    fputc(val, serialfile);
+    fflush(serialfile);
 }
 
 #if 0
@@ -569,9 +577,9 @@ void CheckSerialOut(SerialT *serial)
     {
         serial->flag = 0;
         if (serial->value == 13 && pstmode)
-            putchx(10);
+            putschx(10);
         else
-            putchx(serial->value);
+            putschx(serial->value);
     }
 }
 
@@ -740,6 +748,7 @@ int main(int argc, char **argv)
     int32_t maxloops = -1;
 
     tracefile = stdout;
+    serialfile = stdout;
     getcwd(rootdir, 100);
 
     for (i = 1; i < argc; i++)
@@ -755,6 +764,20 @@ int main(int argc, char **argv)
 	    tracefile = fopen(argv[i], "wt");
 	    if(!tracefile){
 		fprintf(stderr, "Unable to open trace file %s.\n", argv[i]);
+		spinsim_exit(1);
+	    }
+	}
+	else if (strcmp(argv[i], "-B") == 0){
+            if (i+1 == argc || argv[i+1][0] == '-')
+            {
+		fprintf(stderr, "Serial file not specified\n");
+		spinsim_exit(1);
+            }
+            if (!printflag) printflag = 0xffffffff;
+	    i++;
+	    serialfile = fopen(argv[i], "wt");
+	    if(!serialfile){
+		fprintf(stderr, "Unable to open serial file %s.\n", argv[i]);
 		spinsim_exit(1);
 	    }
 	}
