@@ -127,7 +127,7 @@ void usage(void)
 void putchx(int32_t val)
 {
     putchar(val);
-    fflush(stdout);
+    fflush(tracefile);
 }
 
 void putschx(int32_t val)
