@@ -17,6 +17,7 @@
 #include "eeprom.h"
 #include "spinsim.h"
 
+extern int32_t memsize;
 extern int32_t loopcount;
 extern int32_t printflag;
 extern int32_t baudrate;
@@ -43,7 +44,10 @@ void Help(void)
     printf("setbr cog addr - Set breakpoint for cog to addr%s", NEW_LINE);
     printf("state cog      - Dump cog state%s", NEW_LINE);
     printf("peekc cog addr - Peek cog memory%s", NEW_LINE);
+    printf("dumpc cog      - Dump cog memory%s", NEW_LINE);
+    printf("dumpl cog      - Dump cog lut memory%s", NEW_LINE);
     printf("peekh addr     - Peek hub memory%s", NEW_LINE);
+    printf("dumph addr     - Dump hub memory%s", NEW_LINE);
 }
 
 char *SkipChar(char *str, int value)
@@ -147,11 +151,37 @@ void Debug(void)
                 sscanf(buffer+6, "%x %x", &cognum, &address);
                 printf("%8.8x%s", PasmVars[cognum&15].mem[address&511], NEW_LINE);
             }
+            else if (!strncmp(buffer, "dumpc ", 6))
+            {
+                int cognum, i;
+                sscanf(buffer+6, "%x", &cognum);
+		for (i = 0 ; i <= 511 ; i++)
+                {
+                    printf("%4.4x %8.8x%s", i, PasmVars[cognum&15].mem[i&511], NEW_LINE);
+		}
+            }
+            else if (!strncmp(buffer, "dumpl ", 6))
+            {
+                int cognum, i;
+                sscanf(buffer+6, "%x", &cognum);
+		for (i = 0 ; i <= 511 ; i++)
+                {
+                    printf("%4.4x %8.8x%s", i+0x200, PasmVars[cognum&15].lut[i&511], NEW_LINE);
+		}
+            }
             else if (!strncmp(buffer, "peekh ", 6))
             {
                 int address;
                 sscanf(buffer+6, "%x", &address);
                 printf("%8.8x%s", hubram[address], NEW_LINE);
+            }
+            else if (!strncmp(buffer, "dumph", 5))
+            {
+		int i;
+		for (i = 0 ; i <= (memsize-1) ; i += 4)
+                {
+                    printf("%8.8x %8.8x%s", i, LONG(i), NEW_LINE);
+		}
             }
             else if (!strcmp(buffer, "reboot"))
             {
