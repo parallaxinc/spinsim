@@ -2635,7 +2635,7 @@ int32_t ExecutePasmInstruction2(PasmVarsT *pasmvars)
                 break;
 
                 case 3: // wmlong
-if (streamflag) printf("\nSTREAM COLLISION\n");
+                if (streamflag) printf("\nSTREAM COLLISION\n");
                 value2 += pasmvars->rwrep << 2;
                 write_czr = 0;
                 if (value2 >= 0xfff80 && value2 < 0xfffc0)
@@ -2684,7 +2684,7 @@ if (streamflag) printf("\nSTREAM COLLISION\n");
 
 	    case 6: // rdbyte
             write_czr |= 1;
-if (streamflag) printf("\nSTREAM COLLISION\n");
+            if (streamflag) printf("\nSTREAM COLLISION\n");
 	    result = BYTE(value2);
 	    zflag = (result == 0);
             if (pasmvars->printflag > 1)
@@ -2693,7 +2693,7 @@ if (streamflag) printf("\nSTREAM COLLISION\n");
 
 	    case 7: // rdword
             write_czr |= 1;
-if (streamflag) printf("\nSTREAM COLLISION\n");
+            if (streamflag) printf("\nSTREAM COLLISION\n");
 	    result = read_unaligned_word(value2);
 	    zflag = (result == 0);
             if (pasmvars->printflag > 1)
@@ -2708,7 +2708,7 @@ if (streamflag) printf("\nSTREAM COLLISION\n");
 #if 1
 	    case 0: // rdlong
             write_czr |= 1;
-if (streamflag) printf("\nSTREAM COLLISION\n");
+            if (streamflag) printf("\nSTREAM COLLISION\n");
             rsltaddr += pasmvars->rwrep;
             value2 += pasmvars->rwrep << 2;
             if (value2 >= 0xfff80 && value2 < 0xfffc0)
@@ -2902,21 +2902,21 @@ if (streamflag) printf("\nSTREAM COLLISION\n");
             break;
 #else
 	    case 0: // rdbyte
-if (streamflag) printf("\nSTREAM COLLISION\n");
+            if (streamflag) printf("\nSTREAM COLLISION\n");
 	    result = BYTE(value2);
             if (pasmvars->printflag > 1)
 	        fprintf(tracefile, ", rdb[%x]", value2);
             break;
 
 	    case 1: // rdword
-if (streamflag) printf("\nSTREAM COLLISION\n");
+            if (streamflag) printf("\nSTREAM COLLISION\n");
 	    result = read_unaligned_word(value2);
             if (pasmvars->printflag > 1)
 	        fprintf(tracefile, ", rdw[%x]", value2);
             break;
 
 	    case 2: // rdlong
-if (streamflag) printf("\nSTREAM COLLISION\n");
+            if (streamflag) printf("\nSTREAM COLLISION\n");
             rsltaddr += pasmvars->rwrep;
             value2 += pasmvars->rwrep << 2;
             if (value2 >= 0xfff80 && value2 < 0xfffc0)
@@ -3023,7 +3023,7 @@ if (streamflag) printf("\nSTREAM COLLISION\n");
             case 2: // wrbyte, wrword
             if (czi & 4) // wrword
             {
-if (streamflag) printf("\nSTREAM COLLISION\n");
+                if (streamflag) printf("\nSTREAM COLLISION\n");
                 write_czr = 0;
                 write_unaligned_word(value2, value1);
                 if (pasmvars->printflag > 1)
@@ -3031,7 +3031,7 @@ if (streamflag) printf("\nSTREAM COLLISION\n");
             }
             else // wrbyte
             {
-if (streamflag) printf("\nSTREAM COLLISION\n");
+                if (streamflag) printf("\nSTREAM COLLISION\n");
                 write_czr = 0;
 	        BYTE(value2) = value1;
                 if (pasmvars->printflag > 1)
@@ -3050,7 +3050,7 @@ if (streamflag) printf("\nSTREAM COLLISION\n");
             else // wrlong
             {
                 value2 += pasmvars->rwrep << 2;
-if (streamflag) printf("\nSTREAM COLLISION\n");
+                if (streamflag) printf("\nSTREAM COLLISION\n");
                 write_czr = 0;
                 if (value2 >= 0xfff80 && value2 < 0xfffc0)
                 {
