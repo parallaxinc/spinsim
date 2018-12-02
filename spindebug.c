@@ -231,9 +231,11 @@ void ProcessObjCall(int32_t objnum, int32_t subnum)
 		// Locate filename
 		ptr1 = FindChar(linebuf, '"');
 		if (*ptr1)
+		{
 		    ptr1++;
 		    ptr2 = FindChar(ptr1, '"');
 		    if (*ptr2) ptr2--;
+		}
 		else
 		    ptr2 = ptr1;
 		num = ptr2 - ptr1 + 1;
