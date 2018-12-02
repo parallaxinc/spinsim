@@ -2,11 +2,11 @@ Spinsim 0.99
 
 This version of spinsim supports most of the opcodes in the P2 v32b instruction
 set.  The opcodes that are not supported are as follows:
-
-  xzero   xinit   xcont   hubset  setdacs setxfrq getxacc getbrk
-  cogbrk  brk     setcy   setci   setcq   setcfrq setcmod getrnd
-  xoro32  skip    skipf   execf 
-
+```
+xzero   xinit   xcont   hubset  setdacs setxfrq getxacc getbrk
+cogbrk  brk     setcy   setci   setcq   setcfrq setcmod getrnd
+xoro32  skip    skipf   execf 
+```
 skip, skipf and execf have been partially implemented, but do not handle jumps
 or interrupts correctly.
 
@@ -27,9 +27,9 @@ original C source code and the output from running the test programs on the
 FPGA.
 
 A test program can be run by going into the verify directory and typing
-
+```
 ../spinsim -t -b testopsa.bin
-
+```
 The output can be redirected to a file and compared with the hardware file
 to verify that spinsim matches the hardware.
 
@@ -45,6 +45,7 @@ option.  The debugger prints the prompt "DEBUG>" to indicate that it is ready
 to accept a command.  The "help" command will print the following:
 
 Debug Commands
+```
 help           - Print command list
 exit           - Exit spinsim
 step           - Run one cycle
@@ -56,6 +57,7 @@ setbr cog addr - Set breakpoint for cog to addr
 state cog      - Dump cog state
 peekc cog addr - Print out a cog memory location
 peekh addr     - Print out a hub memory location
+```
 
 The "step" command will run one cycle, and the "stepx" command will run any
 non-executing cycles until it encounters an instruction that is executed.
@@ -70,7 +72,7 @@ controlled by the verbosity level, which is set by the "verbose" command.
 The verbosity level can also be set with the command-line parameter "-v#".
 
 The verbosity levels are as follows:
-
+```
 0 - Disable printing
 1 - Print only the executed instructions
 2 - Print only the executed instructions, and show the execution results
@@ -80,7 +82,7 @@ The verbosity levels are as follows:
 6 - Also print instructions that include icache waits
 7 - Also print instructions waiting for a pin state
 8 - Print all cycles, including waitcnt waits
-
+```
 The verbosity level is entered as a hexadecimal number.  If the verbosity level
 is entered as a single digit it will apply to all cogs.  If more than one digit
 is entered each digit will be used for each cog, starting with cog 0 for the
