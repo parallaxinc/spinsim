@@ -652,6 +652,7 @@ int32_t ExecutePasmInstruction(PasmVarsT *pasmvars)
 		//pasmvars->state = 5;
 	        zflag = (result == 0);
 	        cflag = 0;
+                pasmvars->waitflag = 0;
 	    }
 	    break;
 
@@ -669,6 +670,7 @@ int32_t ExecutePasmInstruction(PasmVarsT *pasmvars)
 		//pasmvars->state = 5;
 	        zflag = (result == 0);
 	        cflag = zflag;
+                pasmvars->waitflag = 0;
 	    }
 	    break;
 
