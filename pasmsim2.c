@@ -4574,9 +4574,9 @@ int32_t ExecutePasmInstruction2(PasmVarsT *pasmvars)
         if (opcode & 4) // loc
         {
             if (czi & 4)
-                result = (pc + value2) << 2;
+                result = (pc + instruct + pc_incr);
             else
-                result = value2 << 2;
+                result = instruct;
             result &= ADDR_MASK;
         }
         else // calld
