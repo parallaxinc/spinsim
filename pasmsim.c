@@ -169,6 +169,7 @@ int32_t ExecutePasmInstruction(PasmVarsT *pasmvars)
 		else
 		    LONG(value2) = pasmvars->mem[dstaddr];
 	    }
+        cflag = 0;
 	    break;
 
 	    case 3: // misc hubops
